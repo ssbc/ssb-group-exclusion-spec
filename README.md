@@ -59,9 +59,6 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
 "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
 interpreted as described in [RFC 2119](https://tools.ietf.org/html/rfc2119).
 
-
-## 3. Definitions
-
 A set of SSB peers that possess the same [envelope-spec] symmetric encryption
 key (called "group key") is called a "private group".  Each peer in a group is
 called a "group member" or "member".  The "declared members" of a group is
@@ -91,7 +88,7 @@ common predecessor.  We say that the "common members" of epoch `G` is the
 intersection of the declared members of `G` with the declared members of `X`.
 
 
-## 4. Functional Specification
+## 3. Functional Specification
 
 Exclusion of a group member is a mechanism in which a new epoch is created, such
 that the excluded member is allowed to continue publishing messages for the
@@ -110,7 +107,7 @@ provide some rules that remaining group members can follow to "resolve" forked
 epochs and arrive at a common epoch as the new singleton context.
 
 
-### 5.1. Excluding a group member
+### 3.1. Excluding a group member
 
 Suppose there is a private group or epoch `G`.  To exclude a group member `C`,
 some group member `A` (`A` is not `C`) publishes the root message of a new epoch
@@ -118,25 +115,25 @@ some group member `A` (`A` is not `C`) publishes the root message of a new epoch
 remaining members (all group `G` members except `C`), announcing the epoch key
 and other epoch metadata.  To achieve this, member `A`:
 
-* 5.1.1. MUST create a new symmetric group key (also known as the epoch key)
+* 3.1.1. MUST create a new symmetric group key (also known as the epoch key)
 which MUST have at least 32 bytes of cryptographically secure random data
-* 5.1.2. MUST create a new group feed (also known as the "epoch feed") using the
+* 3.1.2. MUST create a new group feed (also known as the "epoch feed") using the
 epoch key, as described in [ssb-meta-feeds-group-spec] Section 3.2
-* 5.1.3. MUST publish a `group/init` message on the epoch feed, as described in
+* 3.1.3. MUST publish a `group/init` message on the epoch feed, as described in
 the [private-group-spec], with the exception that:
-  * 5.1.3.A. the `tangles.group.previous` field MUST be the group `G`'s ID, and
-  * 5.1.3.B. if `G` is also an epoch of another group, `tangles.group.root` MUST
+  * 3.1.3.A. the `tangles.group.previous` field MUST be the group `G`'s ID, and
+  * 3.1.3.B. if `G` is also an epoch of another group, `tangles.group.root` MUST
   be the group ID for the first group (which is not an epoch of any other in
   this chain of epochs), otherwise
-  * 5.1.3.C. if `G` is not an epoch of any other group, `tangles.group.root`
+  * 3.1.3.C. if `G` is not an epoch of any other group, `tangles.group.root`
   MUST be group `G`'s ID
-* 5.1.4. SHOULD publish a `group/exclude` message on their group feed for `G`
+* 3.1.4. SHOULD publish a `group/exclude` message on their group feed for `G`
 that points to `C`'s group feed for `G`. :fire: TODO more details
-* 5.1.5. MUST publish a `group/add-member` message on their group feed for `G`,
+* 3.1.5. MUST publish a `group/add-member` message on their group feed for `G`,
 to add remaining group members (this includes `A`, for recovery purposes) to the
 epoch, such that the message schema is the same as the one in
 [ssb-meta-feeds-group-spec] Section 3.1
-  * 5.1.5.A. If a single SSB message cannot, due to message size
+  * 3.1.5.A. If a single SSB message cannot, due to message size
   restrictions, contain all remaining members as recipients, then member `A`
   MUST publish on their group feed for `G` a sequence of `group/add-members`
   according to [ssb-meta-feeds-group-spec] Section 3.1, such that the union of
@@ -151,7 +148,7 @@ receive the `group/exclude` message at different times, and in this transition
 period there may have been useful content published on group feeds for `G`.
 
 
-### 5.2. Resolving forked epochs with same membership
+### 3.2. Resolving forked epochs with same membership
 
 Suppose there are two forked epochs `L` and `R`, their nearest
 common predecessor is `X`, and `L`'s epoch key encoded in hexadecimal is
@@ -164,7 +161,7 @@ members of `L` and all the members of `R` who detect the existence of `L` and
 publishing messages to `R` and SHOULD publish new messages only on epoch `L`.
 
 
-### 5.3. Resolving forked epochs with subset membership
+### 3.3. Resolving forked epochs with subset membership
 
 Suppose there are two forked epochs `L` and `R`, their nearest common
 predecessor is `X`.
@@ -176,7 +173,7 @@ cease publishing messages to `R` and SHOULD publish new messages only on epoch
 `L`.
 
 
-### 5.4. Resolving forked epochs with overlapping membership
+### 3.4. Resolving forked epochs with overlapping membership
 
 Suppose there are two forked epochs `L` and `R`, their nearest
 common predecessor is `X`, and `L`'s epoch key encoded in hexadecimal is
@@ -196,7 +193,7 @@ exclusion, but SHOULD adopt the newly detected epoch to publish new group
 messages.
 
 
-### 5.5. Forked epochs with disjoint membership
+### 3.5. Forked epochs with disjoint membership
 
 <!-- FIXME: -->
 
