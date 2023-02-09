@@ -313,9 +313,14 @@ classDef winner fill:#beb,stroke:#4a4,color:#000;
 
 <!-- FIXME: a section for each case, mermaid diagrams -->
 
-## 5. Security Considerations
+## 5. Security and Privacy Considerations
 
 <!-- FIXME: -->
+
+:fire: MORE WORDS: An excluded member can still read and preserve all of the
+messages up until the point they were excluded, and this could be used
+maliciously to extract as much information from other group members as possible,
+e.g. publish-timing analysis to extract timezones, etc.
 
 ## 6. References
 
