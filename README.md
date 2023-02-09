@@ -101,11 +101,11 @@ transitioned to the new epoch and ceased replication of the former group.  This
 in effect only excludes the excluded member from participating in *future* group
 discussions.
 
-Creation of epochs are restricted to a specific member and, in a context of
-network partitions, this allows multiple new epochs created by different group
-members.  While the original group guaranteed a singleton context, when there
-are multiple epochs there are multiple contexts where discussions can be held,
-which is an undesirable property, i.e. forked epochs.  In this section we
+Creation of epochs is not restricted to any specific member and, in the presence
+of network partitions, this allows multiple new epochs created by different
+group members.  While the original group guaranteed a singleton context, when
+there are multiple epochs there are multiple contexts where discussions can be
+held, which is an undesirable property, i.e. forked epochs.  In this section we
 provide some rules that remaining group members can follow to "resolve" forked
 epochs and arrive at a common epoch as the new singleton context.
 
