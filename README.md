@@ -59,10 +59,16 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
 "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
 interpreted as described in [RFC 2119](https://tools.ietf.org/html/rfc2119).
 
+
+## 3. Definitions and notations
+
 A set of SSB peers that possess the same [envelope-spec] symmetric encryption
 key (called "group key") is called a "private group".  Each peer in a group is
 called a "group member" or "member".  The "declared members" of a group is
 the set of SSB peers who received the group key via `group/add-member` messages.
+
+We also denote the declared members of a group `G` as the mathematical set
+`members(G)`.
 
 When a new group key is created and shared to a subset of members excluding some
 other members, that group key is called an "epoch key", and the private group is
@@ -82,13 +88,32 @@ other, and both of them are not succeeded by any epoch, we call this situation
 or epoch `X` that precedes (or is equal to) `G` and `H`.  The "nearest common
 predecessor" `X` of epochs `G` and `H` is the only common predecessor of `G`
 and `H` such that no other common predecessor `Y` (of `G` and `H`) succeeds `X`.
+We also denote it as `X = nearest(G, H)`.
 
 In a situation of forked epochs `G` and `H`, assume that `X` is the nearest
-common predecessor.  We say that the "common members" of epoch `G` is the
-intersection of the declared members of `G` with the declared members of `X`.
+common predecessor.  We say that the "common members" of epoch `G` with respect
+to `H` is the intersection of the declared members of `G` with the declared
+members of `X`.
+
+Some mathematical set relations will be useful throughout this specification.
+We shall denote:
+
+* The equivalence of two sets `A` and `B` as `A = B`
+* The intersection as `A ∩ B`
+* The union as `A ∪ B`
+* The set difference as `A \ B`
+* The symmetric difference as `A △ B`
+* The subset relation as `A ⊆ B`
+* The proper subset relation as `A ⊂ B`
+
+For instance, the common members of `G` with respect to `H` can be denoted as:
+
+```
+common(G,H) = members(G) ∩ members(nearest(G,H))
+```
 
 
-## 3. Functional Specification
+## 4. Functional Specification
 
 Exclusion of a group member is a mechanism in which a new epoch is created, such
 that the excluded member is allowed to continue publishing messages for the
@@ -107,37 +132,49 @@ provide some rules that remaining group members can follow to "resolve" forked
 epochs and arrive at a common epoch as the new singleton context.
 
 
-### 3.1. Excluding a group member
+### 4.1. Excluding a group member
 
 Suppose there is a private group or epoch `G`.  To exclude a group member `C`,
 some group member `A` (`A` is not `C`) publishes the root message of a new epoch
 `H` with pointers to `G`, and then publishes SSB message(s) encrypted to the
 remaining members (all group `G` members except `C`), announcing the epoch key
-and other epoch metadata.  To achieve this, member `A`:
+and other epoch metadata. See figure 1 as an example.
 
-* 3.1.1. MUST create a new symmetric group key (also known as the epoch key)
+```mermaid
+---
+title: Figure 1
+---
+graph TB;
+  zero[G: A,B,C,D]
+  zero--"A excludes C"-->one[H: A,B,D]
+```
+
+To achieve this, member `A`:
+
+* 4.1.1. MUST create a new symmetric group key (also known as the epoch key)
 which MUST have at least 32 bytes of cryptographically secure random data
-* 3.1.2. MUST create a new group feed (also known as the "epoch feed") using the
+* 4.1.2. MUST create a new group feed (also known as the "epoch feed") using the
 epoch key, as described in [ssb-meta-feeds-group-spec] Section 3.2
-* 3.1.3. MUST publish a `group/init` message on the epoch feed, as described in
+* 4.1.3. MUST publish a `group/init` message on the epoch feed for `H`, as described in
 the [private-group-spec], with the exception that:
-  * 3.1.3.A. the `tangles.group.previous` field MUST be the group `G`'s ID, and
-  * 3.1.3.B. if `G` is also an epoch of another group, `tangles.group.root` MUST
+  * 4.1.3.A. the `tangles.group.previous` field MUST be the group `G`'s ID, and
+  * 4.1.3.B. if `G` is also an epoch of another group, `tangles.group.root` MUST
   be the group ID for the first group (which is not an epoch of any other in
   this chain of epochs), otherwise
-  * 3.1.3.C. if `G` is not an epoch of any other group, `tangles.group.root`
+  * 4.1.3.C. if `G` is not an epoch of any other group, `tangles.group.root`
   MUST be group `G`'s ID
-* 3.1.4. SHOULD publish a `group/exclude` message on their group feed for `G`
+* 4.1.4. SHOULD publish a `group/exclude` message on their group feed for `G`
 that points to `C`'s group feed for `G`. :fire: TODO more details
-* 3.1.5. MUST publish a `group/add-member` message on their group feed for `G`,
+* 4.1.5. MUST publish a `group/add-member` message on their group feed for `G`,
 to add remaining group members (this includes `A`, for recovery purposes) to the
 epoch, such that the message schema is the same as the one in
 [ssb-meta-feeds-group-spec] Section 3.1
-  * 3.1.5.A. If a single SSB message cannot, due to message size
+  * 4.1.5.A. If a single SSB message cannot, due to message size
   restrictions, contain all remaining members as recipients, then member `A`
   MUST publish on their group feed for `G` a sequence of `group/add-members`
   according to [ssb-meta-feeds-group-spec] Section 3.1, such that the union of
   all recipients in that sequence equals all remaining group members
+
 
 Concerning replication of group feeds, all remaining group members SHOULD cease
 to replicate `C`'s group feed for `G` as soon as the `group/exclude` message
@@ -147,171 +184,155 @@ can have a negative impact on eventual consistency, because group members may
 receive the `group/exclude` message at different times, and in this transition
 period there may have been useful content published on group feeds for `G`.
 
+### 4.2. Selecting the next epoch
 
-### 3.2. Resolving forked epochs with same membership
+TODO :fire:
 
-Suppose there are two forked epochs `L` and `R`, their nearest
-common predecessor is `X`, and `L`'s epoch key encoded in hexadecimal is
-lexicographically less than `R`'s epoch key encoded in hexadecimal. :fire: IS
-THIS OUR DETERMINISTIC RULE?
-
-If the common members of `L` are equal to the common members of `R`, then all
-members of `L` and all the members of `R` who detect the existence of `L` and
-`R` MUST select `L` as the resolved epoch, meaning that they SHOULD cease
-publishing messages to `R` and SHOULD publish new messages only on epoch `L`.
+(just a way of saying that peers should progress to the next epoch using the
+"select winner" mechanism)
 
 
-### 3.3. Resolving forked epochs with subset membership
+### 4.3. Resolving forked epochs with same membership
 
-Suppose there are two forked epochs `L` and `R`, their nearest common
-predecessor is `X`.
+Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key
+encoded in hexadecimal is lexicographically less than `R`'s epoch key encoded in
+hexadecimal. :fire: IS THIS OUR DETERMINISTIC RULE?
 
-If the common members of `L` are a proper subset of the common members of `R`,
-then all members of `L` and all the members of `R` who detect the existence of
-`L` and `R` MUST select `L` as the resolved epoch, meaning that they SHOULD
-cease publishing messages to `R` and SHOULD publish new messages only on epoch
-`L`.
+If `common(L,R) = common(R,L)`, then all peers in `common(L,R)` who detect the
+existence of both `L` and `R` MUST select `L` as the resolved epoch (because its
+key is lexicographically smallest), meaning that they SHOULD cease publishing
+messages to `R` and SHOULD publish new messages only on epoch `L`. See figure 2.
+
+```mermaid
+---
+title: Figure 2
+---
+graph TB;
+  zero[X: a,b,c,d]
+  zero--"a excludes d"-->L[L: a,b,c]
+  zero--"b excludes d"-->R[R: a,b,c]
+  R-. a,b,c select L .->L
+```
+
+If a member `b` in `R` adds a new member `e` to `R`, then `b` MUST add `e`
+to `L` as soon as `b` detects the existence of `L` (figure 3).
+
+```mermaid
+---
+title: Figure 3
+---
+graph TB;
+  zero[X: a,b,c,d]
+  zero--"a excludes d"-->L[L: a,b,c]
+  zero--"b excludes d, adds e"-->R[R: a,b,c,e]
+  R-. a,b,c select L .->L
+  L-. b adds e .->L2[L: a,b,c,e]
+```
 
 
-### 3.4. Resolving forked epochs with overlapping membership
+### 4.4. Resolving forked epochs with subset membership
 
-Suppose there are two forked epochs `L` and `R`, their nearest
-common predecessor is `X`, and `L`'s epoch key encoded in hexadecimal is
-lexicographically less than `R`'s epoch key encoded in hexadecimal. :fire: IS
-THIS OUR DETERMINISTIC RULE?
+Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ⊂ common(R,L)`,
+then all peers in `common(L,R)` who detect the existence of both `L` and `R`
+MUST select `L` as the resolved epoch (regardless of the lexicographic order of
+their epoch keys), meaning that they SHOULD cease publishing messages to `R` and
+SHOULD publish new messages only on epoch `L`. See figure 4.
 
-If the symmetric difference of the common members of `L` and the common members
-of `R` is not empty, then any peer in the intersection of `L`'s common members
-and `R`'s common members SHOULD create a new epoch succeeded `L`, excluding all
-peers in `L`'s common members minus `R`'s common members.
+```mermaid
+---
+title: Figure 4
+---
+graph TB;
+  zero[X: a,b,c,d]
+  zero--"a excludes c,d"-->L[L: a,b]
+  zero--"b excludes d"-->R[R: a,b,c]
+  R-. a,b select L .->L
+```
+
+If a member `b` in `R` adds a new member `e` to `R`, then `b` MUST add `e`
+to `L` as soon as `b` detects the existence of `L` (figure 5).
+
+```mermaid
+---
+title: Figure 5
+---
+graph TB;
+  zero[X: a,b,c,d]
+  zero--"a excludes c,d"-->L[L: a,b]
+  zero--"b excludes d, adds e"-->R[R: a,b,c,e]
+  R-. a,b select L .->L
+  L-. b adds e .->L2[L: a,b,e]
+```
+
+
+### 4.5. Resolving forked epochs with overlapping membership
+
+Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key encoded in
+hexadecimal is lexicographically less than `R`'s epoch key encoded in
+hexadecimal. :fire: IS THIS OUR DETERMINISTIC RULE?
+
+If `common(L,R) △ common(R,L)` is not empty, then any peer in
+`common(L,R) ∩ common(R,L)` SHOULD create a new epoch succeeding `L`, excluding
+all peers in `common(L,R) \ common(R,L)`. See figure 6.
+
+```mermaid
+---
+title: Figure 6
+---
+graph TB;
+  zero[X: a,b,c,d]
+  zero--"a excludes c"-->L[L: a,b,d]
+  zero--"b excludes d"-->R[R: a,b,c]
+  L--"a excludes d"-->L2[L2: a,b]
+  R-.->L2
+```
 
 It is RECOMMENDED that a peer waits a random amount of time before performing
 the exclusion, to give opportunity for some other peer to perform the exclusion
 first.  If a peer in the intersection of `L`'s common members and `R`'s common
 members detects a new epoch based on `L`, then this peer MUST NOT perform the
-exclusion, but SHOULD adopt the newly detected epoch to publish new group
+exclusion, but SHOULD select the newly detected epoch to publish new group
 messages.
 
+However, it is possible that two or more peers perform exclusions, which leads
+to forked epochs with the same membership, where the rules from section 4.3.
+would apply in order to resolve that situation.
 
-### 3.5. Forked epochs with disjoint membership
 
-<!-- FIXME: -->
+### 4.6. Forked epochs with disjoint membership
 
-## 4. Examples
-
-### 4.1. Excluding a group member (new epoch)
-
-```mermaid
-graph TB;
-  zero[key0: A,B,C,D]
-  zero--"A removes D"-->one[key1: A,B,C]
-  class one winner;
-
-classDef default fill:#ddd,stroke:#aaa,color:#000;
-classDef winner fill:#beb,stroke:#4a4,color:#000;
-```
-
-### 4.2. Resolving forks with same membership (selection)
+Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ∩ common(R,L)`
+is empty, then nothing needs to be performed in this situation, because the
+forked epochs represent two disjoint contexts.  From the perspective of peers in
+`members(L)`, epoch `R` does not exist, and from the perspective of peers in
+`members(R)`, group `L` does not exist. See figure 7.
 
 ```mermaid
+---
+title: Figure 7
+---
 graph TB;
-  zero[key0: A,B,C,D]
-  zero--"A removes D"-->L[keyL: A,B,C]
-  zero--"B removes D"-->R[keyR: A,B,C]
-  class L winner;
-
-classDef default fill:#ddd,stroke:#aaa,color:#000;
-classDef winner fill:#beb,stroke:#4a4,color:#000;
+  zero[X: a,b,c,d]
+  zero--"a excludes c,d"-->L[L: a,b]
+  zero--"c excludes a,b"-->R[R: c,d]
 ```
 
-AND
+However, if a member is added to `L` or `R` such that the intersection
+`common(L,R) ∩ common(R,L)` would be non-empty, then the rules in sections 4.3.
+or 4.4. or 4.5. would apply. See figure 8.
 
 ```mermaid
+---
+title: Figure 8
+---
 graph TB;
-  zero[key0: A,B,C,D]
-  zero--"A removes D"-->L[keyL: A,B,C]
-  zero--"B removes D, adds E"-->R[keyR: A,B,C,E]
-  class L winner;
-
-classDef default fill:#ddd,stroke:#aaa,color:#000;
-classDef winner fill:#beb,stroke:#4a4,color:#000;
+  zero[X: a,b,c,d]
+  zero--"a excludes c,d"-->L[L: a,b]
+  zero--"c excludes a,b"-->R[R: c,d]
+  R--"d adds a,b"-->R2[R: a,b,c,d]
+  R2-. a,b select L .->L
 ```
 
-
-### 4.3. Resolving forks with subset membership (selection)
-
-```mermaid
-graph TB;
-  zero[key0: A,B,C,D]
-  zero--"A removes D"-->L[keyL: A,B,C]
-  zero--"B removes C,D"-->R[keyR: A,B]
-  class R winner;
-
-classDef default fill:#ddd,stroke:#aaa,color:#000;
-classDef winner fill:#beb,stroke:#4a4,color:#000;
-```
-
-AND
-
-```mermaid
-graph TB;
-  zero[key0: A,B,C,D]
-  zero--"A removes D"-->L[keyL: A,B,C]
-  zero--"B removes C, removes D, adds E"-->R[keyR: A,B,E]
-  class R winner;
-
-classDef default fill:#ddd,stroke:#aaa,color:#000;
-classDef winner fill:#beb,stroke:#4a4,color:#000;
-```
-
-### 4.4. Resolving forks with non-subset membership (new epoch)
-
-```mermaid
-graph TB;
-  zero[key0: A,B,C,D]
-  zero--"A removes C"-->L[keyL: A,B,D]
-  zero--"B removes D"-->R[keyR: A,B,C]
-  L--"A removes D"-->L1[keyL1: A,B]
-  L--"B removes D"-->L2[keyL2: A,B]
-  class L1 winner;
-
-classDef default fill:#ddd,stroke:#aaa,color:#000;
-classDef winner fill:#beb,stroke:#4a4,color:#000;
-```
-
-
-### 4.5. Resolving forks with disjoint membership (do nothing)
-
-```mermaid
-graph TB;
-  zero[key0: A,B,C,D]
-  zero--"A removes C,D"-->L[keyL: A,B]
-  zero--"C removes A,B"-->R[keyR: C,D]
-  class L winner;
-  class R winner;
-
-classDef default fill:#ddd,stroke:#aaa,color:#000;
-classDef winner fill:#beb,stroke:#4a4,color:#000;
-```
-
-AND
-
-```mermaid
-graph TB;
-  zero[key0: A,B,C,D,E]
-  zero--"A removes C,D"-->L[keyL: A,B,E]
-  zero--"C removes A,B then D adds A"-->R[keyR: A,C,D,E]
-  %% class L winner;
-  %% class R winner;
-
-classDef default fill:#ddd,stroke:#aaa,color:#000;
-classDef winner fill:#beb,stroke:#4a4,color:#000;
-```
-
-
-
-
-<!-- FIXME: a section for each case, mermaid diagrams -->
 
 ## 5. Security and Privacy Considerations
 
