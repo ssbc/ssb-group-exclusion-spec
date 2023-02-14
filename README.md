@@ -134,29 +134,29 @@ epochs and arrive at a common epoch as the new singleton context.
 
 ### 4.1. Excluding a group member
 
-Suppose there is a private group or epoch `G`.  To exclude a group member `C`,
-some group member `A` (`A` is not `C`) publishes the root message of a new epoch
+Suppose there is a private group or epoch `G`.  To exclude a group member `c`,
+some group member `a` (`a` is not `c`) publishes the root message of a new epoch
 `H` with pointers to `G`, and then publishes SSB message(s) encrypted to the
-remaining members (all group `G` members except `C`), announcing the epoch key
-and other epoch metadata. See figure 1 as an example.
+remaining members (all group `G` declared members except `c`), announcing the
+epoch key and other epoch metadata. See figure 1 as an example.
 
 ```mermaid
 ---
 title: Figure 1
 ---
 graph TB;
-  zero[G: A,B,C,D]
-  zero--"A excludes C"-->one[H: A,B,D]
+  zero[G: a,b,c,d]
+  zero--"a excludes c"-->one[H: a,b,d]
 ```
 
-To achieve this, member `A`:
+To achieve this, member `a`:
 
 * 4.1.1. MUST create a new symmetric group key (also known as the epoch key)
 which MUST have at least 32 bytes of cryptographically secure random data
 * 4.1.2. MUST create a new group feed (also known as the "epoch feed") using the
 epoch key, as described in [ssb-meta-feeds-group-spec] Section 3.2
-* 4.1.3. MUST publish a `group/init` message on the epoch feed for `H`, as described in
-the [private-group-spec], with the exception that:
+* 4.1.3. MUST publish a `group/init` message on the epoch feed for `H`, as
+described in the [private-group-spec], with the exception that:
   * 4.1.3.A. the `tangles.group.previous` field MUST be the group `G`'s ID, and
   * 4.1.3.B. if `G` is also an epoch of another group, `tangles.group.root` MUST
   be the group ID for the first group (which is not an epoch of any other in
@@ -164,20 +164,20 @@ the [private-group-spec], with the exception that:
   * 4.1.3.C. if `G` is not an epoch of any other group, `tangles.group.root`
   MUST be group `G`'s ID
 * 4.1.4. SHOULD publish a `group/exclude` message on their group feed for `G`
-that points to `C`'s group feed for `G`. :fire: TODO more details
+that points to `c`'s group feed for `G`. :fire: TODO more details
 * 4.1.5. MUST publish a `group/add-member` message on their group feed for `G`,
-to add remaining group members (this includes `A`, for recovery purposes) to the
+to add remaining group members (this includes `a`, for recovery purposes) to the
 epoch, such that the message schema is the same as the one in
 [ssb-meta-feeds-group-spec] Section 3.1
   * 4.1.5.A. If a single SSB message cannot, due to message size
-  restrictions, contain all remaining members as recipients, then member `A`
+  restrictions, contain all remaining members as recipients, then member `a`
   MUST publish on their group feed for `G` a sequence of `group/add-members`
   according to [ssb-meta-feeds-group-spec] Section 3.1, such that the union of
   all recipients in that sequence equals all remaining group members
 
 
 Concerning replication of group feeds, all remaining group members SHOULD cease
-to replicate `C`'s group feed for `G` as soon as the `group/exclude` message
+to replicate `c`'s group feed for `G` as soon as the `group/exclude` message
 is replicated.  Remaining group members MAY also cease to replicate every
 member's group feed for `G` when `group/exclude` is replicated, although this
 can have a negative impact on eventual consistency, because group members may
