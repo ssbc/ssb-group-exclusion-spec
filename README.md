@@ -62,35 +62,54 @@ interpreted as described in [RFC 2119](https://tools.ietf.org/html/rfc2119).
 
 ## 3. Definitions and notations
 
-A set of SSB peers that possess the same [envelope-spec] symmetric encryption
+The following words and phrases are commonly used throughout this document.
+They are listed here with their intended meaning for the convenience of the
+reader.
+
+Private group and membership:
+
+* A set of SSB peers that possess the same [envelope-spec] symmetric encryption
 key (called "group key") is called a "private group".  Each peer in a group is
 called a "group member" or "member".  The "declared members" of a group is
 the set of SSB peers who received the group key via `group/add-member` messages.
-
 We also denote the declared members of a group `G` as the mathematical set
 `members(G)`.
 
-When a new group key is created and shared to a subset of members excluding some
-other members, that group key is called an "epoch key", and the private group is
-called an "epoch".  The act of creating an epoch is called "group member
+Epoch:
+
+* When a new group key is created and shared to a subset of members excluding
+some other members, that group key is called an "epoch key", and the private
+group is called an "epoch".  The act of creating an epoch is called "group member
 exclusion" or "exclusion".  The group members who receive the "epoch key" are
-called "remaining members".
+called "remaining members".  We can also say that the original private group is
+the "epoch zero", hence we shall use the term "epoch" in this document whenever
+we mean either the original private group or subsequent epochs.
 
-We say that the original group (say `G`) "directly preceded" the epoch (say
-`H`), and `H` "directly succeeded" `G`.  There may be a new epoch `I` excluding
-a member from `H`, in which case the `I` directly succeeded `H` but `I`
-"succeeded" `G`.  Similarly, `G` "preceded" `I`.  A sequence of epochs up until
-the original group is called a "precedence chain".
+Precedence:
 
-Whenever there are two epochs such that one of them is not preceded by the
+* We say that `G` "directly preceded" epoch `H` if `H` was created by excluding
+some member from `G`, and `H` "directly succeeded" `G`.  There may be a new
+epoch `I` excluding a member from `H`, in which case the `I` directly succeeded
+`H` but `I` "succeeded" `G`.  Similarly, `G` "preceded" `I`.  A sequence of
+epochs up until epoch zero is called a "precedence chain".
+
+Forked epochs:
+
+* Whenever there are two epochs such that one of them is not preceded by the
 other, and both of them are not succeeded by any epoch, we call this situation
-"forked epochs".  A "common predecessor" of two epochs `G` and `H` is any group
-or epoch `X` that precedes (or is equal to) `G` and `H`.  The "nearest common
-predecessor" `X` of epochs `G` and `H` is the only common predecessor of `G`
-and `H` such that no other common predecessor `Y` (of `G` and `H`) succeeds `X`.
-We also denote it as `X = nearest(G, H)`.
+"forked epochs".
 
-In a situation of forked epochs `G` and `H`, assume that `X` is the nearest
+Common predecessors:
+
+* A "common predecessor" of two epochs `G` and `H` is any epoch `X` that
+precedes (or is equal to) `G` and `H`.  The "nearest common predecessor" `X` of
+epochs `G` and `H` is the only common predecessor of `G` and `H` such that no
+other common predecessor `Y` (of `G` and `H`) succeeds `X`.  We also denote it
+as `X = nearest(G, H)`.
+
+Common members:
+
+* In a situation of forked epochs `G` and `H`, assume that `X` is the nearest
 common predecessor.  We say that the "common members" of epoch `G` with respect
 to `H` is the intersection of the declared members of `G` with the declared
 members of `X`.
@@ -117,28 +136,27 @@ common(G,H) = members(G) ∩ members(nearest(G,H))
 
 Exclusion of a group member is a mechanism in which a new epoch is created, such
 that the excluded member is allowed to continue publishing messages for the
-original group.  However, the excluded member's messages have no guarantee of
+former epoch.  However, the excluded member's messages have no guarantee of
 being replicated by remaining members, because those remaining members have
-transitioned to the new epoch and ceased replication of the former group.  This
+transitioned to the new epoch and ceased replication of the former epoch.  This
 in effect only excludes the excluded member from participating in *future* group
 discussions.
 
 Creation of epochs is not restricted to any specific member and, in the presence
 of network partitions, this allows multiple new epochs created by different
-group members.  While the original group guaranteed a singleton context, when
-there are multiple epochs there are multiple contexts where discussions can be
-held, which is an undesirable property, i.e. forked epochs.  In this section we
-provide some rules that remaining group members can follow to "resolve" forked
-epochs and arrive at a common epoch as the new singleton context.
+group members.  While epoch zero guaranteed a singleton context, when there are
+multiple epochs there are multiple contexts where discussions can be held, which
+is an undesirable property, i.e. forked epochs.  In this section we provide some
+rules that remaining members can follow to "resolve" forked epochs and
+arrive at a common epoch as the new singleton context.
 
 
-### 4.1. Excluding a group member
+### 4.1. Excluding a member
 
-Suppose there is a private group or epoch `G`.  To exclude a group member `c`,
-some group member `a` (`a` is not `c`) publishes to the current epoch `G` that
-`c` will be excluded, creates a new epoch `H`, and adds all declared group
-members of `G` minus `c` as members of `H`. See figure 1 as an example, and the
-following subsections for details.
+Suppose there is an epoch `G`.  To exclude a member `c`, some member `a` (`a`
+MUST NOT be `c`) publishes to epoch `G` that `c` will be excluded, creates a new
+epoch `H`, and adds all declared group members of `G` minus `c` as the members
+of `H`. See figure 1 as an example, and the following subsections for details.
 
 ```mermaid
 ---
@@ -158,12 +176,10 @@ epoch key as the `feedpurpose`, as described in [ssb-meta-feeds-group-spec]
 Section 3.2.2.
 * 4.1.3. MUST publish a `group/init` message on the epoch feed for `H`, as
 described in the [private-group-spec], with the exception that:
-  * 4.1.3.A. the `tangles.group.previous` field MUST be the group `G`'s ID, and
-  * 4.1.3.B. if `G` is also an epoch of another group, `tangles.group.root` MUST
-  be the group ID for the first group (which is not an epoch of any other in
-  this chain of epochs), otherwise
-  * 4.1.3.C. if `G` is not an epoch of any other group, `tangles.group.root`
-  MUST be group `G`'s ID
+  * 4.1.3.A. the `tangles.group.previous` field MUST be epoch `G`'s ID, and
+  * 4.1.3.B. if `G` is not epoch zero, then `tangles.group.root` MUST be the
+  group ID for epoch zero, otherwise
+  * 4.1.3.C. if `G` is epoch zero, `tangles.group.root` MUST be epoch `G`'s ID
 * 4.1.4. SHOULD publish a `group/exclude` message on their group feed for `G`
 that points to `c`'s group feed for `G`. :fire: TODO more details
 * 4.1.5. MUST publish a `group/add-member` message on their group feed for `G`,
@@ -174,16 +190,17 @@ epoch, such that the message schema is the same as the one in
   restrictions, contain all remaining members as recipients, then member `a`
   MUST publish on their group feed for `G` a sequence of `group/add-members`
   according to [ssb-meta-feeds-group-spec] Section 3.1, such that the union of
-  all recipients in that sequence equals all remaining group members
+  all recipients in that sequence equals all remaining members
 
 
-Concerning replication of group feeds, all remaining group members SHOULD cease
-to replicate `c`'s group feed for `G` as soon as the `group/exclude` message
-is replicated.  Remaining group members MAY also cease to replicate every
-member's group feed for `G` when `group/exclude` is replicated, although this
-can have a negative impact on eventual consistency, because group members may
-receive the `group/exclude` message at different times, and in this transition
-period there may have been useful content published on group feeds for `G`.
+:fire: MOVE THIS AWAY. Concerning replication of group feeds, all remaining
+group members SHOULD cease to replicate `c`'s group feed for `G` as soon as the
+`group/exclude` message is replicated.  Remaining group members MAY also cease
+to replicate every member's group feed for `G` when `group/exclude` is
+replicated, although this can have a negative impact on eventual consistency,
+because group members may receive the `group/exclude` message at different
+times, and in this transition period there may have been useful content
+published on group feeds for `G`.
 
 ### 4.2. Selecting the next epoch
 
@@ -292,8 +309,7 @@ It is RECOMMENDED that a peer waits a random amount of time before performing
 the exclusion, to give opportunity for some other peer to perform the exclusion
 first.  If a peer in the intersection of `L`'s common members and `R`'s common
 members detects a new epoch based on `L`, then this peer MUST NOT perform the
-exclusion, but SHOULD select the newly detected epoch to publish new group
-messages.
+exclusion, but SHOULD select the newly detected epoch.
 
 However, it is possible that two or more peers perform exclusions, which leads
 to forked epochs with the same membership, where the rules from section 4.3.
@@ -306,7 +322,7 @@ Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ∩ common(R,L
 is empty, then nothing needs to be performed in this situation, because the
 forked epochs represent two disjoint contexts.  From the perspective of peers in
 `members(L)`, epoch `R` does not exist, and from the perspective of peers in
-`members(R)`, group `L` does not exist. See figure 7.
+`members(R)`, epoch `L` does not exist. See figure 7.
 
 ```mermaid
 ---
