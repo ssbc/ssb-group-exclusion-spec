@@ -233,7 +233,7 @@ graph TB;
   zero[X: a,b,c,d]
   zero--"a excludes d"-->L[L: a,b,c]
   zero--"b excludes d"-->R[R: a,b,c]
-  R-. a,b,c select L .->L
+  R-. a,b,c prefer L .->L
 ```
 
 If a member `b` in `R` adds a new member `e` to `R`, then `b` MUST add `e`
@@ -247,7 +247,7 @@ graph TB;
   zero[X: a,b,c,d]
   zero--"a excludes d"-->L[L: a,b,c]
   zero--"b excludes d, adds e"-->R[R: a,b,c,e]
-  R-. a,b,c select L .->L
+  R-. a,b,c prefer L .->L
   L-. b adds e .->L2[L: a,b,c,e]
 ```
 
@@ -267,7 +267,7 @@ graph TB;
   zero[X: a,b,c,d]
   zero--"a excludes c,d"-->L[L: a,b]
   zero--"b excludes d"-->R[R: a,b,c]
-  R-. a,b select L .->L
+  R-. a,b prefer L .->L
 ```
 
 If a member `b` in `R` adds a new member `e` to `R`, then `b` MUST add `e`
@@ -281,7 +281,7 @@ graph TB;
   zero[X: a,b,c,d]
   zero--"a excludes c,d"-->L[L: a,b]
   zero--"b excludes d, adds e"-->R[R: a,b,c,e]
-  R-. a,b select L .->L
+  R-. a,b prefer L .->L
   L-. b adds e .->L2[L: a,b,e]
 ```
 
@@ -351,7 +351,7 @@ graph TB;
   zero--"a excludes c,d"-->L[L: a,b]
   zero--"c excludes a,b"-->R[R: c,d]
   R--"d adds a,b"-->R2[R: a,b,c,d]
-  R2-. a,b select L .->L
+  R2-. a,b prefer L .->L
 ```
 
 
@@ -394,7 +394,7 @@ figure 9 as an example.
 ---
 title: Figure 9
 ---
-graph TB;
+graph LR;
   afetch[a fetches]
   subgraph X
     Xb[b's group feed in X]
