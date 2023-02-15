@@ -197,7 +197,7 @@ TODO :fire:
 
 Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key
 encoded in hexadecimal is lexicographically less than `R`'s epoch key encoded in
-hexadecimal. :fire: IS THIS OUR DETERMINISTIC RULE?
+hexadecimal.
 
 If `common(L,R) = common(R,L)`, then all peers in `common(L,R)` who detect the
 existence of both `L` and `R` MUST select `L` as the resolved epoch (because its
@@ -270,7 +270,7 @@ graph TB;
 
 Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key encoded in
 hexadecimal is lexicographically less than `R`'s epoch key encoded in
-hexadecimal. :fire: IS THIS OUR DETERMINISTIC RULE?
+hexadecimal.
 
 If `common(L,R) △ common(R,L)` is not empty, then any peer in
 `common(L,R) ∩ common(R,L)` SHOULD create a new epoch succeeding `L`, excluding
