@@ -93,6 +93,11 @@ epoch `I` excluding a member from `H`, in which case the `I` directly succeeded
 `H` but `I` "succeeded" `G`.  Similarly, `G` "preceded" `I`.  A sequence of
 epochs up until epoch zero is called a "precedence chain".
 
+Preference:
+
+* Epoch `H` is said to be "preferred over" epoch `G` if `H` is where new
+discussions should take place among the remaining members.
+
 Forked epochs:
 
 * Whenever there are two epochs such that one of them is not preceded by the
@@ -153,10 +158,11 @@ arrive at a common epoch as the new singleton context.
 
 ### 4.1. Excluding a member
 
-Suppose there is an epoch `G`.  To exclude a member `c`, some member `a` (`a`
-MUST NOT be `c`) publishes to epoch `G` that `c` will be excluded, creates a new
-epoch `H`, and adds all declared group members of `G` minus `c` as the members
-of `H`. See figure 1 as an example, and the following subsections for details.
+Suppose there is an epoch `G`.  To exclude a member `c` from `G`, some member
+`a` (who MUST NOT be `c`) publishes to epoch `G` that `c` will be excluded,
+creates a new epoch `H`, and adds all declared group members of `G` minus `c` as
+the members of `H`. See figure 1 as an example, and the following subsections
+for details.
 
 ```mermaid
 ---
@@ -181,10 +187,10 @@ described in the [private-group-spec], with the exception that:
   group ID for epoch zero, otherwise
   * 4.1.3.C. if `G` is epoch zero, `tangles.group.root` MUST be epoch `G`'s ID
 * 4.1.4. SHOULD publish a `group/exclude` message on their group feed for `G`
-that points to `c`'s group feed for `G`. :fire: TODO more details
+that points to `c`'s group feed for `G`. :fire: FIXME: more details
 * 4.1.5. MUST publish a `group/add-member` message on their group feed for `G`,
 to add remaining group members (this includes `a`, for recovery purposes) to the
-epoch, such that the message schema is the same as the one in
+epoch `H`, such that the message schema is the same as the one in
 [ssb-meta-feeds-group-spec] Section 3.1
   * 4.1.5.A. If a single SSB message cannot, due to message size
   restrictions, contain all remaining members as recipients, then member `a`
@@ -192,22 +198,21 @@ epoch, such that the message schema is the same as the one in
   according to [ssb-meta-feeds-group-spec] Section 3.1, such that the union of
   all recipients in that sequence equals all remaining members
 
+It is RECOMMENDED that epoch `G` is the "most preferred epoch" among all the
+epochs that `a` is a member of, which succeed a certain epoch zero.
 
-:fire: MOVE THIS AWAY. Concerning replication of group feeds, all remaining
-group members SHOULD cease to replicate `c`'s group feed for `G` as soon as the
-`group/exclude` message is replicated.  Remaining group members MAY also cease
-to replicate every member's group feed for `G` when `group/exclude` is
-replicated, although this can have a negative impact on eventual consistency,
-because group members may receive the `group/exclude` message at different
-times, and in this transition period there may have been useful content
-published on group feeds for `G`.
 
-### 4.2. Selecting the next epoch
+### 4.2. Preferring the next epoch
 
-TODO :fire:
+When a member `a` of an epoch `G` replicates and decrypts a `group/add-member`
+message that adds `a` to the new epoch `H` (in other words, `a` "detected the
+existence" of `H`), then `a` MUST select epoch `H` as "preferred" over `G`.
 
-(just a way of saying that peers should progress to the next epoch using the
-"select winner" mechanism)
+Said differently, if `H` directly succeeds `G`, then `H` MUST be preferred over
+`G`.
+
+The implications of determining the "preferred epochs" will be addressed in
+section 4.7.
 
 
 ### 4.3. Resolving forked epochs with same membership
@@ -217,9 +222,8 @@ encoded in hexadecimal is lexicographically less than `R`'s epoch key encoded in
 hexadecimal.
 
 If `common(L,R) = common(R,L)`, then all peers in `common(L,R)` who detect the
-existence of both `L` and `R` MUST select `L` as the resolved epoch (because its
-key is lexicographically smallest), meaning that they SHOULD cease publishing
-messages to `R` and SHOULD publish new messages only on epoch `L`. See figure 2.
+existence of both `L` and `R` MUST select `L` as the preferred epoch (because
+its key is lexicographically smallest) over `R`. See figure 2.
 
 ```mermaid
 ---
@@ -252,9 +256,8 @@ graph TB;
 
 Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ⊂ common(R,L)`,
 then all peers in `common(L,R)` who detect the existence of both `L` and `R`
-MUST select `L` as the resolved epoch (regardless of the lexicographic order of
-their epoch keys), meaning that they SHOULD cease publishing messages to `R` and
-SHOULD publish new messages only on epoch `L`. See figure 4.
+MUST select `L` as the preferred epoch (regardless of the lexicographic order of
+their epoch keys) over `G`. See figure 4.
 
 ```mermaid
 ---
@@ -289,9 +292,10 @@ Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key encoded in
 hexadecimal is lexicographically less than `R`'s epoch key encoded in
 hexadecimal.
 
-If `common(L,R) △ common(R,L)` is not empty, then any peer in
-`common(L,R) ∩ common(R,L)` SHOULD create a new epoch succeeding `L`, excluding
-all peers in `common(L,R) \ common(R,L)`. See figure 6.
+If `common(L,R) △ common(R,L)` is not empty **and** `common(L,R) ∩ common(R,L)`
+is not empty, then any peer in `common(L,R) ∩ common(R,L)` SHOULD create a new
+epoch directly succeeding `L`, excluding all peers in
+`common(L,R) \ common(R,L)`. See figure 6.
 
 ```mermaid
 ---
@@ -307,9 +311,9 @@ graph TB;
 
 It is RECOMMENDED that a peer waits a random amount of time before performing
 the exclusion, to give opportunity for some other peer to perform the exclusion
-first.  If a peer in the intersection of `L`'s common members and `R`'s common
-members detects a new epoch based on `L`, then this peer MUST NOT perform the
-exclusion, but SHOULD select the newly detected epoch.
+first.  If a peer in `common(L,R) ∩ common(R,L)` detects a new epoch `L2`
+directly succeeding `L`, then this peer MUST NOT perform the exclusion, but
+SHOULD select `L2` as preferred over `L`.
 
 However, it is possible that two or more peers perform exclusions, which leads
 to forked epochs with the same membership, where the rules from section 4.3.
@@ -348,6 +352,63 @@ graph TB;
   zero--"c excludes a,b"-->R[R: c,d]
   R--"d adds a,b"-->R2[R: a,b,c,d]
   R2-. a,b select L .->L
+```
+
+
+### 4.7. Most preferred epoch
+
+Given the rules in sections 4.2., 4.3., 4.4., 4.5., and 4.6. defining which
+epoch is preferred, a directed acyclic graph of preference arises, allowing us
+to determining the "most preferred epoch".  Each group member has their own
+definition of most preferred epoch, and they are not necessarily the same.  For
+instance, in the case of forked epochs with disjoint memberships (4.6.), the
+members of the two disjoint epochs select different most preferred epochs.
+
+The "other epochs" are all the epochs that succeed epoch zero, except the most
+preferred epoch.
+
+
+### 4.7.1. Publishing messages
+
+Once a peer has discovered their most preferred epoch `H`, they SHOULD cease
+publishing SSB messages on other epochs, and SHOULD publish new messages only on
+epoch `H`, until the moment when their most preferred epoch changes.
+
+
+### 4.7.2. Replicating other epochs
+
+Assume that replicating an SSB feed involves two operations: "fetching" new
+updates (new messages published) from that feed, and "serving" any messages in
+that feed to an interested peer.
+
+As soon as a peer `a` has discovered their most preferred epoch `H`:
+
+* 4.7.2.A. `a` SHOULD cease fetching messages from group feeds of other epochs
+`X` belonging to a member that was excluded from `X`, but should continue to
+fetch messages from group feeds belonging to any remaining member of `X`. See
+figure 9 as an example.
+* 4.7.2.B. `a` SHOULD continue to serve messages from group feeds of any epoch
+`X` belonging to **any** member of `X`.
+
+```mermaid
+---
+title: Figure 9
+---
+graph TB;
+  afetch[a fetches]
+  subgraph X
+    Xb[b's group feed in X]
+    Xa[a's group feed in X]
+    Xc[c's group feed in X]
+  end
+  X--"b excludes c"-->H
+  subgraph H
+    Hb[b's group feed in H]
+    Ha[a's group feed in H]
+  end
+  afetch -.-> Xa & Xb & Ha & Hb
+
+  style afetch fill:#0000,stroke:#0000;
 ```
 
 
