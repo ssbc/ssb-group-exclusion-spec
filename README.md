@@ -135,10 +135,10 @@ epochs and arrive at a common epoch as the new singleton context.
 ### 4.1. Excluding a group member
 
 Suppose there is a private group or epoch `G`.  To exclude a group member `c`,
-some group member `a` (`a` is not `c`) publishes the root message of a new epoch
-`H` with pointers to `G`, and then publishes SSB message(s) encrypted to the
-remaining members (all group `G` declared members except `c`), announcing the
-epoch key and other epoch metadata. See figure 1 as an example.
+some group member `a` (`a` is not `c`) publishes to the current epoch `G` that
+`c` will be excluded, creates a new epoch `H`, and adds all declared group
+members of `G` minus `c` as members of `H`. See figure 1 as an example, and the
+following subsections for details.
 
 ```mermaid
 ---
@@ -154,7 +154,8 @@ To achieve this, member `a`:
 * 4.1.1. MUST create a new symmetric group key (also known as the epoch key)
 which MUST have at least 32 bytes of cryptographically secure random data
 * 4.1.2. MUST create a new group feed (also known as the "epoch feed") using the
-epoch key, as described in [ssb-meta-feeds-group-spec] Section 3.2
+epoch key as the `feedpurpose`, as described in [ssb-meta-feeds-group-spec]
+Section 3.2.2.
 * 4.1.3. MUST publish a `group/init` message on the epoch feed for `H`, as
 described in the [private-group-spec], with the exception that:
   * 4.1.3.A. the `tangles.group.previous` field MUST be the group `G`'s ID, and
