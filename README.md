@@ -212,18 +212,41 @@ Said differently, if `H` directly succeeds `G`, then `H` MUST be preferred over
 `G`.
 
 The implications of determining the "preferred epochs" will be addressed in
-section 4.7.
+section 4.8.
 
 
-### 4.3. Resolving forked epochs with same membership
+### 4.3. Tie-breaking rule
 
-Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key
-encoded in hexadecimal is lexicographically less than `R`'s epoch key encoded in
-hexadecimal.
+In some cases, there may be multiple forked epochs that "tie" as the preferred
+epoch.  We define a tie-breaking rule that allows all remaining members to
+deterministically choose one of those tied epochs as the preferred epoch.  This
+rule will be used in sections 4.4. and 4.6.
+
+Suppose:
+
+- `keys` is the set of all epoch keys that are currently "tied"
+- `keys_count` is the size of the set `keys`
+- `sorted_keys` is the lexicographically sorted (by hexadecimal encoding) list
+  of all epoch keys in `keys`
+- `concat_sorted_keys` is the concatenation of all epoch keys in `sorted_keys`
+- `hashed` is the SHA-256 hash of `concat_sorted_keys`
+- `hashed8` are the first 8 bytes of `hashed`
+- `as_number` is the integer value of `hashed8` in big-endian byte order
+- `winning_index` is the remainder of `as_number` divided by `keys_count`, that
+  is, `as_number modulo keys_count`
+
+Then the tie-breaking rule is: pick the epoch key at index `winning_index` in
+`sorted_keys` as the winner.  List indexes are zero-based.
+
+
+### 4.4. Resolving forked epochs with same membership
+
+Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key is the
+winner according to the tie-breaking rule (section 4.3.).
 
 If `common(L,R) = common(R,L)`, then all peers in `common(L,R)` who detect the
-existence of both `L` and `R` MUST select `L` as the preferred epoch (because
-its key is lexicographically smallest) over `R`. See figure 2.
+existence of both `L` and `R` MUST select `L` as the preferred epoch (determined
+by the tie-breaking rule) over `R`. See figure 2.
 
 ```mermaid
 ---
@@ -251,13 +274,17 @@ graph TB;
   L-. b adds e .->L2[L: a,b,c,e]
 ```
 
+Here we addressed two forked epochs.  In the generalized case where two or more
+forked epochs have the same `common` membership, then the tie-breaking rule
+(section 4.3.) is used to select the preferred epoch.  The tie-breaking rule
+supports multiple inputs.
 
-### 4.4. Resolving forked epochs with subset membership
+
+### 4.5. Resolving forked epochs with subset membership
 
 Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ⊂ common(R,L)`,
 then all peers in `common(L,R)` who detect the existence of both `L` and `R`
-MUST select `L` as the preferred epoch (regardless of the lexicographic order of
-their epoch keys) over `G`. See figure 4.
+MUST select `L` as the preferred epoch over `R`. See figure 4.
 
 ```mermaid
 ---
@@ -286,11 +313,10 @@ graph TB;
 ```
 
 
-### 4.5. Resolving forked epochs with overlapping membership
+### 4.6. Resolving forked epochs with overlapping membership
 
-Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key encoded in
-hexadecimal is lexicographically less than `R`'s epoch key encoded in
-hexadecimal.
+Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key is the
+winner according to the tie-breaking rule (section 4.3.).
 
 If `common(L,R) △ common(R,L)` is not empty **and** `common(L,R) ∩ common(R,L)`
 is not empty, then any peer in `common(L,R) ∩ common(R,L)` SHOULD create a new
@@ -316,11 +342,11 @@ directly succeeding `L`, then this peer MUST NOT perform the exclusion, but
 SHOULD select `L2` as preferred over `L`.
 
 However, it is possible that two or more peers perform exclusions, which leads
-to forked epochs with the same membership, where the rules from section 4.3.
+to forked epochs with the same membership, where the rules from section 4.4.
 would apply in order to resolve that situation.
 
 
-### 4.6. Forked epochs with disjoint membership
+### 4.7. Forked epochs with disjoint membership
 
 Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ∩ common(R,L)`
 is empty, then nothing needs to be performed in this situation, because the
@@ -339,8 +365,8 @@ graph TB;
 ```
 
 However, if a member is added to `L` or `R` such that the intersection
-`common(L,R) ∩ common(R,L)` would be non-empty, then the rules in sections 4.3.
-or 4.4. or 4.5. would apply. See figure 8.
+`common(L,R) ∩ common(R,L)` would be non-empty, then the rules in sections 4.4.
+or 4.5. or 4.6. would apply. See figure 8.
 
 ```mermaid
 ---
@@ -355,27 +381,27 @@ graph TB;
 ```
 
 
-### 4.7. Most preferred epoch
+### 4.8. Most preferred epoch
 
-Given the rules in sections 4.2., 4.3., 4.4., 4.5., and 4.6. defining which
-epoch is preferred, a directed acyclic graph of preference arises, allowing us
-to determining the "most preferred epoch".  Each group member has their own
-definition of most preferred epoch, and they are not necessarily the same.  For
-instance, in the case of forked epochs with disjoint memberships (4.6.), the
-members of the two disjoint epochs select different most preferred epochs.
+Given the rules in sections 4.2.–4.7. defining which epoch is preferred, a
+directed acyclic graph of preference arises, allowing us to determining the
+"most preferred epoch".  Each group member has their own definition of most
+preferred epoch, and they are not necessarily the same.  For instance, in the
+case of forked epochs with disjoint memberships (4.7.), the members of the two
+disjoint epochs select different most preferred epochs.
 
 The "other epochs" are all the epochs that succeed epoch zero, except the most
 preferred epoch.
 
 
-### 4.7.1. Publishing messages
+### 4.8.1. Publishing messages
 
 Once a peer has discovered their most preferred epoch `H`, they SHOULD cease
 publishing SSB messages on other epochs, and SHOULD publish new messages only on
 epoch `H`, until the moment when their most preferred epoch changes.
 
 
-### 4.7.2. Replicating other epochs
+### 4.8.2. Replicating other epochs
 
 Assume that replicating an SSB feed involves two operations: "fetching" new
 updates (new messages published) from that feed, and "serving" any messages in
@@ -383,11 +409,11 @@ that feed to an interested peer.
 
 As soon as a peer `a` has discovered their most preferred epoch `H`:
 
-* 4.7.2.A. `a` SHOULD cease fetching messages from group feeds of other epochs
+* 4.8.2.A. `a` SHOULD cease fetching messages from group feeds of other epochs
 `X` belonging to a member that was excluded from `X`, but should continue to
 fetch messages from group feeds belonging to any remaining member of `X`. See
 figure 9 as an example.
-* 4.7.2.B. `a` SHOULD continue to serve messages from group feeds of any epoch
+* 4.8.2.B. `a` SHOULD continue to serve messages from group feeds of any epoch
 `X` belonging to **any** member of `X`.
 
 ```mermaid
