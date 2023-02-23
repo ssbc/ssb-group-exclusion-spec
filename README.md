@@ -185,7 +185,7 @@ described in the [private-group-spec], with the exception that:
   * 4.1.3.A. the `tangles.group.previous` field MUST be epoch `G`'s ID, and
   * 4.1.3.B. if `G` is not epoch zero, then `tangles.group.root` MUST be the
   group ID for epoch zero, otherwise
-  * 4.1.3.C. if `G` is epoch zero, `tangles.group.root` MUST be epoch `G`'s ID
+  * 4.1.3.C. if `G` is epoch zero, `tangles.group.root` MUST be `null`
 * 4.1.4. SHOULD publish a `group/exclude` message on their group feed for `G`
 that points to `c`'s group feed for `G`. :fire: FIXME: more details
 * 4.1.5. MUST publish a `group/add-member` message on their group feed for `G`,
