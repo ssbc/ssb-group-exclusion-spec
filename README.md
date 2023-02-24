@@ -173,8 +173,9 @@ graph TB;
   zero--"a excludes c"-->one[H: a,b,d]
 ```
 
-Let `Ga` be `a`'s subfeed dedicated for publishing messages for epoch `G`.  To
-perform member exclusion, the following steps SHOULD be taken in order:
+Let `Ga` be `a`'s subfeed dedicated for publishing messages for epoch `G`, and
+similarly `Gc` be `c`'s subfeed.  To perform member exclusion, the following
+steps SHOULD be taken in order:
 
 * 4.1.1. `a` MUST create a new symmetric group key `H` (also known as the epoch
 key) which MUST have at least 32 bytes of cryptographically secure random data
@@ -190,9 +191,12 @@ Section 3.2.2.
 * 4.1.4. `a` SHOULD publish an encrypted `group/exclude` message on `Ga` with
 the following fields in the message `content`:
   * 4.1.4.A. `type` equals the string `group/exclude`
-  * 4.1.4.B. `excludes` is an array of group member IDs (their root metafeed
-  IDs) excluded from `G`.  In this case `c` is the only excluded member, but
-  Section 4.1. supports excluding multiple members at once.
+  * 4.1.4.B. `excludes` is an array of objects with the shape
+  `{id, groupFeedId, sequence}` where `id` is the root metafeed ID of `c`,
+  `groupFeedId` is `Gc`'s ID, and `sequence` is the sequence number of the last
+  message `a` possesses from `Gc`.  In this case `c` is the only excluded
+  member, so we only have one `{id, groupFeedId, sequence}` object but Section
+  4.1. also supports excluding multiple members at once.
   * 4.1.4.C. `recps` is an array containing a single string: the group ID for
   `G`, signalling that this message should be box2-encrypted for the group `G`
 * 4.1.5. `a` MUST publish a `group/add-member` message on `Ga`, to add remaining
@@ -414,14 +418,19 @@ Assume that replicating an SSB feed involves two operations: "fetching" new
 updates (new messages published) from that feed, and "serving" any messages in
 that feed to an interested peer.
 
-As soon as a peer `a` has discovered their most preferred epoch `H`:
+As soon as a peer `a` has discovered their most preferred epoch `H`, then for
+every epoch `X` with lower preference than `H`:
 
-* 4.8.2.A. `a` SHOULD cease fetching messages from group feeds of other epochs
-`X` belonging to a member that was excluded from `X`, but should continue to
-fetch messages from group feeds belonging to any remaining member of `X`. See
-figure 9 as an example.
-* 4.8.2.B. `a` SHOULD continue to serve messages from group feeds of any epoch
-`X` belonging to **any** member of `X`.
+* 4.8.2.A. (Fetching excluded members) `a` SHOULD fetch messages from group
+feeds `Xc` belonging to every peer `c` that was excluded from `X`, up until the
+sequence number defined in 4.1.4.B., after which `a` SHOULD cease fetching `Xc`.
+In other words, `a` SHOULD NOT fetch messages from `Xc` with sequence numbers
+greater than the sequence number defined in 4.1.4.B.
+* 4.8.2.B. (Fetching remaining members) `a` SHOULD continue to fetch messages
+from group feeds `Xb` belonging to every remaining member `b` in `X`. See figure
+9 as an example.
+* 4.8.2.C. (Serving all members) `a` SHOULD continue to serve messages from
+group feeds of any epoch `X` belonging to **any** member of `X`.
 
 ```mermaid
 ---
