@@ -173,30 +173,37 @@ graph TB;
   zero--"a excludes c"-->one[H: a,b,d]
 ```
 
-To achieve this, member `a`:
+Let `Ga` be `a`'s subfeed dedicated for publishing messages for epoch `G`.  To
+perform member exclusion, the following steps SHOULD be taken in order:
 
-* 4.1.1. MUST create a new symmetric group key (also known as the epoch key)
-which MUST have at least 32 bytes of cryptographically secure random data
-* 4.1.2. MUST create a new group feed (also known as the "epoch feed") using the
-epoch key as the `feedpurpose`, as described in [ssb-meta-feeds-group-spec]
+* 4.1.1. `a` MUST create a new symmetric group key `H` (also known as the epoch
+key) which MUST have at least 32 bytes of cryptographically secure random data
+* 4.1.2. `a` MUST create a new group feed `Ha` (also known as the "epoch feed")
+using the epoch key as the `feedpurpose`, as described in [ssb-meta-feeds-group-spec]
 Section 3.2.2.
-* 4.1.3. MUST publish a `group/init` message on the epoch feed for `H`, as
-described in the [private-group-spec], with the exception that:
+* 4.1.3. `a` MUST publish a `group/init` message on `Ha`, as described in the
+[private-group-spec], with the exception that:
   * 4.1.3.A. the `tangles.group.previous` field MUST be epoch `G`'s ID, and
   * 4.1.3.B. if `G` is not epoch zero, then `tangles.group.root` MUST be the
   group ID for epoch zero, otherwise
   * 4.1.3.C. if `G` is epoch zero, `tangles.group.root` MUST be `null`
-* 4.1.4. SHOULD publish a `group/exclude` message on their group feed for `G`
-that points to `c`'s group feed for `G`. :fire: FIXME: more details
-* 4.1.5. MUST publish a `group/add-member` message on their group feed for `G`,
-to add remaining group members (this includes `a`, for recovery purposes) to the
-epoch `H`, such that the message schema is the same as the one in
-[ssb-meta-feeds-group-spec] Section 3.1
+* 4.1.4. `a` SHOULD publish an encrypted `group/exclude` message on `Ga` with
+the following fields in the message `content`:
+  * 4.1.4.A. `type` equals the string `group/exclude`
+  * 4.1.4.B. `excludes` is an array of group member IDs (their root metafeed
+  IDs) excluded from `G`.  In this case `c` is the only excluded member, but
+  Section 4.1. supports excluding multiple members at once.
+  * 4.1.4.C. `recps` is an array containing a single string: the group ID for
+  `G`, signalling that this message should be box2-encrypted for the group `G`
+* 4.1.5. `a` MUST publish a `group/add-member` message on `Ga`, to add remaining
+group members (this includes `a`, for recovery purposes) to the epoch `H`, such
+that the message schema is the same as the one in [ssb-meta-feeds-group-spec]
+Section 3.1 with the following exceptions:
   * 4.1.5.A. If a single SSB message cannot, due to message size
   restrictions, contain all remaining members as recipients, then member `a`
-  MUST publish on their group feed for `G` a sequence of `group/add-members`
-  according to [ssb-meta-feeds-group-spec] Section 3.1, such that the union of
-  all recipients in that sequence equals all remaining members
+  MUST publish on `Ga` a sequence of `group/add-members` messages according to
+  [ssb-meta-feeds-group-spec] Section 3.1, such that the union of all recipients
+  in that sequence equals all remaining members
 
 It is RECOMMENDED that epoch `G` is the "most preferred epoch" among all the
 epochs that `a` is a member of, which succeed a certain epoch zero.
