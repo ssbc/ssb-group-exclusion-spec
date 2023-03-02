@@ -192,10 +192,9 @@ Section 3.2.2.
 the following fields in the message `content`:
   * 4.1.4.A. `type` equals the string `group/exclude`
   * 4.1.4.B. `excludes` is an array of objects with the shape
-  `{id, groupFeedId, sequence}` where `id` is the root metafeed ID of `c`,
-  `groupFeedId` is `Gc`'s ID, and `sequence` is the sequence number of the last
-  message `a` possesses from `Gc`.  In this case `c` is the only excluded
-  member, so we only have one `{id, groupFeedId, sequence}` object but Section
+  `{id, groupFeedId}` where `id` is the root metafeed ID of `c` and
+  `groupFeedId` is `Gc`'s ID.  In this case `c` is the only excluded
+  member, so we only have one `{id, groupFeedId}` object but Section
   4.1. also supports excluding multiple members at once.
   * 4.1.4.C. `recps` is an array containing a single string: the group ID for
   `G`, signalling that this message should be box2-encrypted for the group `G`
@@ -423,9 +422,10 @@ every epoch `X` with lower preference than `H`:
 
 * 4.8.2.A. (Fetching excluded members) `a` SHOULD fetch messages from group
 feeds `Xc` belonging to every peer `c` that was excluded from `X`, up until the
-sequence number defined in 4.1.4.B., after which `a` SHOULD cease fetching `Xc`.
+sequence number `SXc` defined in 4.8.2.A.A., after which `a` SHOULD cease fetching `Xc`.
 In other words, `a` SHOULD NOT fetch messages from `Xc` with sequence numbers
-greater than the sequence number defined in 4.1.4.B.
+greater than the sequence number `SXc` defined in 4.8.2.A.A.
+* 4.8.2.A.A. `R` is the set of all remaining members after the removal of `c`. `MR` is the set of all of `R`s messages in this group. `Sc(m)` is, given a message `m`, found by looking at the `previous` array in `m`'s `group` tangle, seeing if there's a message from `Xc` referred to in it, and in that case getting the sequence number of that message. `SXc` is the maximum `Sc(m)` for all messages `m` in `MR`.
 * 4.8.2.B. (Fetching remaining members) `a` SHOULD continue to fetch messages
 from group feeds `Xb` belonging to every remaining member `b` in `X`. See figure
 9 as an example.
