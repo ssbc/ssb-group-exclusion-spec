@@ -20,7 +20,7 @@ In this document, we describe how SSB private groups can create the illusion of
 group member removal by cycling the symmetric keys in "epochs", thus effectively
 excluding a peer from participation in the new epochs.  We also address how to
 resolve various cases of diverging epochs, such that group members follow rules
-that arrive to consensus on which epoch must new content be published on.
+that arrive to consensus on which epoch new content must be published on.
 
 
 ## 1. Introduction
@@ -69,11 +69,11 @@ reader.
 Private group and membership:
 
 * A set of SSB peers that possess the same [envelope-spec] symmetric encryption
-key (called "group key") is called a "private group".  Each peer in a group is
-called a "group member" or "member".  The "declared members" of a group is
-the set of SSB peers who received the group key via `group/add-member` messages.
-We also denote the declared members of a group `G` as the mathematical set
-`members(G)`.
+key (called "group key") is called a "private group" or just "group".  Each peer 
+in a group is called a "group member" or "member".  The "declared members" of a
+group is the set of SSB peers who received the group key via `group/add-member`
+messages. We also denote the declared members of a group `G` as the mathematical
+set `members(G)`.
 
 Epoch:
 
@@ -107,10 +107,9 @@ other, and both of them are not succeeded by any epoch, we call this situation
 Common predecessors:
 
 * A "common predecessor" of two epochs `G` and `H` is any epoch `X` that
-precedes (or is equal to) `G` and `H`.  The "nearest common predecessor" `X` of
-epochs `G` and `H` is the only common predecessor of `G` and `H` such that no
-other common predecessor `Y` (of `G` and `H`) succeeds `X`.  We also denote it
-as `X = nearest(G, H)`.
+precedes `G` and `H`.  The "nearest common predecessor" `X` of epochs `G` and `H`
+is the only common predecessor of `G` and `H` such that no other common predecessor
+`Y` (of `G` and `H`) succeeds `X`.  We also denote it as `X = nearest(G, H)`.
 
 Common members:
 
@@ -123,18 +122,25 @@ Some mathematical set relations will be useful throughout this specification.
 We shall denote:
 
 * The equivalence of two sets `A` and `B` as `A = B`
-* The intersection as `A ∩ B`
-* The union as `A ∪ B`
-* The set difference as `A \ B`
-* The symmetric difference as `A △ B`
-* The subset relation as `A ⊆ B`
-* The proper subset relation as `A ⊂ B`
+* The [subset] relation as `A ⊆ B` ("A is a subset of B")
+* The [proper subset] relation as `A ⊂ B` ("A is a subset of B, AND A is not B")
+* The [intersection] as `A ∩ B`
+* The [union] as `A ∪ B`
+* The [set difference] as `A \ B`
+* The [symmetric difference] as `A △ B`
 
-For instance, the common members of `G` with respect to `H` can be denoted as:
 
+An important definition is the common members of `G` with respect to `H` denoted as:
 ```
 common(G,H) = members(G) ∩ members(nearest(G,H))
 ```
+> TODO - this definition doesn't take into account additions between `common(G, H)` and `H`
+> I think my problem might be that you don't mean "common members" i.e. the intersection...
+> you're defining something else like "members from `nearest(G,H)` that made it to `G`"
+> Why can't we just use?
+> ```
+> common(G,H) = members(G) ∩ members(H)
+> ```
 
 
 ## 4. Functional Specification
@@ -184,6 +190,7 @@ Section 3.2.2.
 * 4.1.3. `a` MUST publish a `group/init` message on `Ha`, as described in the
 [private-group-spec], with the exception that:
   * 4.1.3.A. the `tangles.group.previous` field MUST be epoch `G`'s ID, and
+>      - TODO what's the ID? is it the previous `group/init` message id, or a cloakedId, or ...?
   * 4.1.3.B. if `G` is not epoch zero, then `tangles.group.root` MUST be the
   group ID for epoch zero, otherwise
   * 4.1.3.C. if `G` is epoch zero, `tangles.group.root` MUST be `null`
@@ -204,16 +211,24 @@ Section 3.1 with the following exceptions:
   MUST publish on `Ga` a sequence of `group/add-members` messages according to
   [ssb-meta-feeds-group-spec] Section 3.1, such that the union of all recipients
   in that sequence equals all remaining members
-
-It is RECOMMENDED that epoch `G` is the "most preferred epoch" among all the
-epochs that `a` is a member of, which succeed a certain epoch zero.
+>   - TODO what is the `tangles.group` + `tangles.member` for these `group/add-member`
+>   messages. I think it should be
+>     - `tangles.group`:
+>       - root: the epoch zero group/init message id
+>       - previous: latest message
+>     - `tangles.member`:
+>       - root: the group H group/init message id !?
+>       - previous: the previous `group/add-member` message for group H (if it exists)
+    
+It is RECOMMENDED that epoch `H` is the "most preferred epoch" among all the
+groups epochs that `a` is a member of.
 
 
 ### 4.2. Preferring the next epoch
 
-When a member `a` of an epoch `G` replicates and decrypts a `group/add-member`
-message that adds `a` to the new epoch `H` (in other words, `a` "detected the
-existence" of `H`), then `a` MUST select epoch `H` as "preferred" over `G`.
+When a member `b` of an epoch `G` replicates and decrypts a `group/add-member`
+message that adds them to the new epoch `H` (in other words, `b` "detected the
+existence" of `H`), then `b` MUST select epoch `H` as "preferred" over `G`.
 
 Said differently, if `H` directly succeeds `G`, then `H` MUST be preferred over
 `G`.
@@ -266,8 +281,10 @@ graph TB;
   R-. a,b,c prefer L .->L
 ```
 
-If a member `b` in `R` adds a new member `e` to `R`, then `b` MUST add `e`
+If a member `b` in `R` adds a new member `e` to `R`, then when `b` MUST add `e`
 to `L` as soon as `b` detects the existence of `L` (figure 3).
+> WARNING - this is technically 4.5 now - a subset membership T_T
+> NEEDS ATTENTION
 
 ```mermaid
 ---
@@ -292,6 +309,9 @@ supports multiple inputs.
 Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ⊂ common(R,L)`,
 then all peers in `common(L,R)` who detect the existence of both `L` and `R`
 MUST select `L` as the preferred epoch over `R`. See figure 4.
+
+> TODO need to reveiw the definition of `common` to be able to proceed
+> <<< WIP HERE >>>
 
 ```mermaid
 ---
@@ -489,3 +509,11 @@ e.g. publish-timing analysis to extract timezones, etc.
 [perfect-forward-secrecy]: https://en.wikipedia.org/wiki/Forward_secrecy
 [post-compromise-security]: https://ieeexplore.ieee.org/document/7536374
 [ssb-uri-spec]: https://github.com/ssbc/ssb-uri-spec
+
+
+[subset]: https://en.wikipedia.org/wiki/Subset
+[proper subset]: https://en.wikipedia.org/wiki/Subset
+[union]: https://en.wikipedia.org/wiki/Union_(set_theory)
+[intersection]: https://en.wikipedia.org/wiki/Intersection_(set_theory)
+[set difference]: https://en.wikipedia.org/wiki/Complement_(set_theory)#Relative_complement
+[symmetric difference]: https://en.wikipedia.org/wiki/Symmetric_difference
