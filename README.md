@@ -188,12 +188,7 @@ key) which MUST have at least 32 bytes of cryptographically secure random data
 using the epoch key as the `feedpurpose`, as described in [ssb-meta-feeds-group-spec]
 Section 3.2.2.
 * 4.1.3. `a` MUST publish a `group/init` message on `Ha`, as described in the
-[private-group-spec], with the exception that:
-  * 4.1.3.A. the `tangles.group.previous` field MUST be epoch `G`'s ID, and
->      - TODO what's the ID? is it the previous `group/init` message id, or a cloakedId, or ...?
-  * 4.1.3.B. if `G` is not epoch zero, then `tangles.group.root` MUST be the
-  group ID for epoch zero, otherwise
-  * 4.1.3.C. if `G` is epoch zero, `tangles.group.root` MUST be `null`
+[private-group-spec]
 * 4.1.4. `a` SHOULD publish an encrypted `group/exclude` message on `Ga` with
 the following fields in the message `content`:
   * 4.1.4.A. `type` equals the string `group/exclude`
