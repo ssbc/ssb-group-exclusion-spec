@@ -247,9 +247,9 @@ Then the tie-breaking rule is: pick the epoch key at index `winning_index` in
 Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key is the
 winner according to the tie-breaking rule (section 4.3.).
 
-If `common(L,R) = common(R,L)`, then all peers in `common(L,R)` who detect the
-existence of both `L` and `R` MUST select `L` as the preferred epoch (determined
-by the tie-breaking rule) over `R`. See figure 2.
+If `members(L) = members(R)`, then all peers who detect the existence of both 
+`L` and `R` MUST select `L` as the preferred epoch (determined by the tie-breaking
+rule) over `R`. See figure 2.
 
 ```mermaid
 ---
@@ -262,36 +262,25 @@ graph TB;
   R-. a,b,c prefer L .->L
 ```
 
-If a member `b` in `R` adds a new member `e` to `R`, then `b` MUST add `e`
-to `L` as soon as `b` detects the existence of `L` (figure 3).
-
-```mermaid
----
-title: Figure 3
----
-graph TB;
-  zero[X: a,b,c,d]
-  zero--"a excludes d"-->L[L: a,b,c]
-  zero--"b excludes d, adds e"-->R[R: a,b,c,e]
-  R-. a,b,c prefer L .->L
-  L-. b adds e .->L2[L: a,b,c,e]
-```
-
 Here we addressed two forked epochs.  In the generalized case where two or more
-forked epochs have the same `common` membership, then the tie-breaking rule
-(section 4.3.) is used to select the preferred epoch.  The tie-breaking rule
-supports multiple inputs.
+forked epochs have the same membership, then the tie-breaking rule (section 4.3.)
+is used to select the preferred epoch.  The tie-breaking rule supports multiple 
+inputs.
 
 
 ### 4.5. Resolving forked epochs with subset membership
 
-Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ⊂ common(R,L)`,
-then all peers in `common(L,R)` who detect the existence of both `L` and `R`
-MUST select `L` as the preferred epoch over `R`. See figure 4.
+Suppose there are two forked epochs `L` and `R`.  If their membership are different
+`members(L) ≠ members(R)`, but `common(L,R) ⊆ common(R,L)`, then all peers in 
+`common(L,R)` who detect the existence of both `L` and `R` MUST select `L` as the
+preferred epoch over `R`. (This represents the set of members who have witnessed
+the bifurcation and are in the smaller of the groups - i.e. the group that excluded
+the most other members).
+See figure 3.
 
 ```mermaid
 ---
-title: Figure 4
+title: Figure 3
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -301,11 +290,11 @@ graph TB;
 ```
 
 If a member `b` in `R` adds a new member `e` to `R`, then `b` MUST add `e`
-to `L` as soon as `b` detects the existence of `L` (figure 5).
+to `L` as soon as `b` detects the existence of `L` (figure 4).
 
 ```mermaid
 ---
-title: Figure 5
+title: Figure 4
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -324,11 +313,11 @@ winner according to the tie-breaking rule (section 4.3.).
 If `common(L,R) △ common(R,L)` is not empty **and** `common(L,R) ∩ common(R,L)`
 is not empty, then any peer in `common(L,R) ∩ common(R,L)` SHOULD create a new
 epoch directly succeeding `L`, excluding all peers in
-`common(L,R) \ common(R,L)`. See figure 6.
+`common(L,R) \ common(R,L)`. See figure 5.
 
 ```mermaid
 ---
-title: Figure 6
+title: Figure 5
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -355,11 +344,11 @@ Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ∩ common(R,L
 is empty, then nothing needs to be performed in this situation, because the
 forked epochs represent two disjoint contexts.  From the perspective of peers in
 `members(L)`, epoch `R` does not exist, and from the perspective of peers in
-`members(R)`, epoch `L` does not exist. See figure 7.
+`members(R)`, epoch `L` does not exist. See figure 6.
 
 ```mermaid
 ---
-title: Figure 7
+title: Figure 6
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -369,11 +358,11 @@ graph TB;
 
 However, if a member is added to `L` or `R` such that the intersection
 `common(L,R) ∩ common(R,L)` would be non-empty, then the rules in sections 4.4.
-or 4.5. or 4.6. would apply. See figure 8.
+or 4.5. or 4.6. would apply. See figure 7.
 
 ```mermaid
 ---
-title: Figure 8
+title: Figure 7
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -415,13 +404,13 @@ As soon as a peer `a` has discovered their most preferred epoch `H`:
 * 4.8.2.A. `a` SHOULD cease fetching messages from group feeds of other epochs
 `X` belonging to a member that was excluded from `X`, but should continue to
 fetch messages from group feeds belonging to any remaining member of `X`. See
-figure 9 as an example.
+figure 8 as an example.
 * 4.8.2.B. `a` SHOULD continue to serve messages from group feeds of any epoch
 `X` belonging to **any** member of `X`.
 
 ```mermaid
 ---
-title: Figure 9
+title: Figure 8
 ---
 graph LR;
   afetch[a fetches]
