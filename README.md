@@ -112,12 +112,16 @@ epochs `G` and `H` is the only common predecessor of `G` and `H` such that no
 other common predecessor `Y` (of `G` and `H`) succeeds `X`.  We also denote it
 as `X = nearest(G, H)`.
 
-Common members:
+Fork witnesses
 
 * In a situation of forked epochs `G` and `H`, assume that `X` is the nearest
-common predecessor.  We say that the "common members" of epoch `G` with respect
-to `H` is the intersection of the declared members of `G` with the declared
-members of `X`.
+common predecessor.  We say that the "fork witnesses" of epochs `G` and `H` is
+the interestion of the members of `G`, `H`, and `X`:
+
+```
+forkWitness(G,H) = members(G) ∩ members(H) ∩ members(nearest(G,H))
+                 = members(G) ∩ members(H) ∩ members(X)
+```
 
 Some mathematical set relations will be useful throughout this specification.
 We shall denote:
@@ -129,12 +133,6 @@ We shall denote:
 * The symmetric difference as `A △ B`
 * The subset relation as `A ⊆ B`
 * The proper subset relation as `A ⊂ B`
-
-For instance, the common members of `G` with respect to `H` can be denoted as:
-
-```
-common(G,H) = members(G) ∩ members(nearest(G,H))
-```
 
 
 ## 4. Functional Specification
@@ -247,7 +245,7 @@ Then the tie-breaking rule is: pick the epoch key at index `winning_index` in
 Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key is the
 winner according to the tie-breaking rule (section 4.3.).
 
-If `common(L,R) = common(R,L)`, then all peers in `common(L,R)` who detect the
+If `members(L) = members(R)`, then all peers in `common(L,R)` who detect the
 existence of both `L` and `R` MUST select `L` as the preferred epoch (determined
 by the tie-breaking rule) over `R`. See figure 2.
 
@@ -262,32 +260,18 @@ graph TB;
   R-. a,b,c prefer L .->L
 ```
 
-If a member `b` in `R` adds a new member `e` to `R`, then `b` MUST add `e`
-to `L` as soon as `b` detects the existence of `L` (figure 3).
-
-```mermaid
----
-title: Figure 3
----
-graph TB;
-  zero[X: a,b,c,d]
-  zero--"a excludes d"-->L[L: a,b,c]
-  zero--"b excludes d, adds e"-->R[R: a,b,c,e]
-  R-. a,b,c prefer L .->L
-  L-. b adds e .->L2[L: a,b,c,e]
-```
-
 Here we addressed two forked epochs.  In the generalized case where two or more
 forked epochs have the same `common` membership, then the tie-breaking rule
 (section 4.3.) is used to select the preferred epoch.  The tie-breaking rule
 supports multiple inputs.
 
+// TODO have deleted a diagram, need to -1 on all figure numbers after this
 
 ### 4.5. Resolving forked epochs with subset membership
 
-Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ⊂ common(R,L)`,
-then all peers in `common(L,R)` who detect the existence of both `L` and `R`
-MUST select `L` as the preferred epoch over `R`. See figure 4.
+Suppose there are two forked epochs `L` and `R`.  If `members(L) ⊂ members(R)`,
+then all fork witnesses `forWithness(L,R)` who detect the existence of both `L`
+and `R` MUST select `L` as the preferred epoch over `R`. See figure 4.
 
 ```mermaid
 ---
@@ -300,8 +284,9 @@ graph TB;
   R-. a,b prefer L .->L
 ```
 
-If a member `b` in `R` adds a new member `e` to `R`, then `b` MUST add `e`
-to `L` as soon as `b` detects the existence of `L` (figure 5).
+Further, if a member `b` in `R` adds a new member `e` to `R`, then `b` MUST
+add `e` to `L` as soon as `b` detects the existence of `L` (figure 5).
+
 
 ```mermaid
 ---
@@ -315,16 +300,25 @@ graph TB;
   L-. b adds e .->L2[L: a,b,e]
 ```
 
+These members can be calculated as:
+```
+toAdd = members(R) \ members(X)
+```
 
 ### 4.6. Resolving forked epochs with overlapping membership
 
 Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key is the
 winner according to the tie-breaking rule (section 4.3.).
 
-If `common(L,R) △ common(R,L)` is not empty **and** `common(L,R) ∩ common(R,L)`
-is not empty, then any peer in `common(L,R) ∩ common(R,L)` SHOULD create a new
-epoch directly succeeding `L`, excluding all peers in
-`common(L,R) \ common(R,L)`. See figure 6.
+If `L` and `R` are neither equivalent, nor subsets, but there is overlapping
+membership i.e. the intersection is not the empty set
+
+```
+members(L) ∩ members(R) ≠ ∅ 
+```
+
+then any member in `witnessFork(L,R)` SHOULD create a new epoch directly 
+succeeding `L`, excluding all peers in `members(L) \ members(R)`. See figure 6.
 
 ```mermaid
 ---
