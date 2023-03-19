@@ -20,7 +20,7 @@ In this document, we describe how SSB private groups can create the illusion of
 group member removal by cycling the symmetric keys in "epochs", thus effectively
 excluding a peer from participation in the new epochs.  We also address how to
 resolve various cases of diverging epochs, such that group members follow rules
-that arrive to consensus on which epoch must new content be published on.
+that arrive to consensus on which epoch new content must be published on.
 
 
 ## 1. Introduction
@@ -158,11 +158,12 @@ arrive at a common epoch as the new singleton context.
 
 ### 4.1. Excluding a member
 
-Suppose there is an epoch `G`.  To exclude a member `c` from `G`, some member
-`a` (who MUST NOT be `c`) publishes to epoch `G` that `c` will be excluded,
-creates a new epoch `H`, and adds all declared group members of `G` minus `c` as
-the members of `H`. See figure 1 as an example, and the following subsections
-for details.
+Suppose there is an epoch `G` that  is the "most preferred epoch" among all the
+epochs that `a` is a member of, which succeed a certain epoch zero. To exclude 
+member `c` from `G`, some member `a` (who MUST NOT be `c`) publishes to epoch `G`
+that `c` will be excluded, creates a new epoch `H`, and adds all declared group
+members of `G` minus `c` as the members of `H`. See figure 1 as an example, and
+the following subsections for details.
 
 ```mermaid
 ---
@@ -201,15 +202,12 @@ Section 3.1 with the following exceptions:
   [ssb-meta-feeds-group-spec] Section 3.1, such that the union of all recipients
   in that sequence equals all remaining members
 
-It is RECOMMENDED that epoch `G` is the "most preferred epoch" among all the
-epochs that `a` is a member of, which succeed a certain epoch zero.
-
 
 ### 4.2. Preferring the next epoch
 
-When a member `a` of an epoch `G` replicates and decrypts a `group/add-member`
-message that adds `a` to the new epoch `H` (in other words, `a` "detected the
-existence" of `H`), then `a` MUST select epoch `H` as "preferred" over `G`.
+When a member `b` of an epoch `G` replicates and decrypts a `group/add-member`
+message that adds them to the new epoch `H` (in other words, `b` "detected the
+existence" of `H`), then `b` MUST select epoch `H` as "preferred" over `G`.
 
 Said differently, if `H` directly succeeds `G`, then `H` MUST be preferred over
 `G`.
