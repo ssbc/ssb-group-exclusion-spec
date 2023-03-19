@@ -124,15 +124,15 @@ forkWitness(G,H) = members(G) ∩ members(H) ∩ members(nearest(G,H))
 ```
 
 Some mathematical set relations will be useful throughout this specification.
-We shall denote:
+For two sets `A` and `B`, we use the notation:
 
-* The equivalence of two sets `A` and `B` as `A = B`
-* The intersection as `A ∩ B`
-* The union as `A ∪ B`
-* The set difference as `A \ B`
-* The symmetric difference as `A △ B`
-* The subset relation as `A ⊆ B`
-* The proper subset relation as `A ⊂ B`
+* `A = B` : `A` is equivalent to `B`
+* `A ⊆ B` : `A` is a [subset] of `B`
+* `A ⊂ B` : `A` is a [proper subset] of `B` ("A is a susbet of B, AND A is NOT equivalent to B")
+* `A ∩ B` : the [intersection] of `A` and `B` (the set of elements in both `A` AND `B`)
+* `A ∪ B` : the [union] of `A` and `B` (the set of elements in `A` AND/OR `B`)
+* `A \ B` : the [set difference] of `A` and `B` (the set of elements in `A` but not in `B`)
+* `A △ B` : the [symmetric difference] (the set of elements in the union, but NOT in the intersection)
 
 
 ## 4. Functional Specification
@@ -223,21 +223,9 @@ epoch.  We define a tie-breaking rule that allows all remaining members to
 deterministically choose one of those tied epochs as the preferred epoch.  This
 rule will be used in sections 4.4. and 4.6.
 
-Suppose:
-
-- `keys` is the set of all epoch keys that are currently "tied"
-- `keys_count` is the size of the set `keys`
-- `sorted_keys` is the lexicographically sorted (by hexadecimal encoding) list
-  of all epoch keys in `keys`
-- `concat_sorted_keys` is the concatenation of all epoch keys in `sorted_keys`
-- `hashed` is the SHA-256 hash of `concat_sorted_keys`
-- `hashed8` are the first 8 bytes of `hashed`
-- `as_number` is the integer value of `hashed8` in big-endian byte order
-- `winning_index` is the remainder of `as_number` divided by `keys_count`, that
-  is, `as_number modulo keys_count`
-
-Then the tie-breaking rule is: pick the epoch key at index `winning_index` in
-`sorted_keys` as the winner.  List indexes are zero-based.
+The tie-breaking rule is: among the forked epochs, sort their epoch keys by
+lexicographic order (in hexadecimal encoding) and the epoch with the smallest
+epoch key is considered the winner.
 
 
 ### 4.4. Resolving forked epochs with same membership
@@ -439,12 +427,33 @@ graph LR;
 
 ## 5. Security and Privacy Considerations
 
-<!-- FIXME: -->
 
-:fire: MORE WORDS: An excluded member can still read and preserve all of the
-messages up until the point they were excluded, and this could be used
-maliciously to extract as much information from other group members as possible,
-e.g. publish-timing analysis to extract timezones, etc.
+### 5.1. Excluded members can read old messages
+
+An excluded member can still read and preserve all of the messages up until the
+point they were excluded, and this could be used maliciously to extract as much
+information from other group members as possible, for instance by analysing the
+timestamps of messages published to the group and deriving suitable timezones
+for each peer.
+
+
+### 5.2. Weak tie-breaking rule
+
+The tie-breaking rule is simple and easy to implement, but it can be gamed such
+that a malicious group member can force their forked epoch to be preferred over
+others.  This can be achieved by brute-forcing the epoch ID until it is
+lexicographically "small" (such as starting with the character `0`).  It is
+currently unknown how this weakness can be exploited to degrade security or
+privacy, but at the very least it reduces fairness and randomness in choosing
+preferred epochs.
+
+A better tie-breaking rule would have the property that gives each
+epoch-creating peer no information on how "strong" their epoch key in winning
+a tie-break.  However, we also require tie-breaking rules to be deterministic,
+and to create a total order between a set of forked epochs, because we need
+group members to eventually converge on a single most preferred epoch.  We have
+not found a tie-breaking rule with all three properties, so this is future work.
+
 
 ## 6. References
 
@@ -481,3 +490,10 @@ e.g. publish-timing analysis to extract timezones, etc.
 [perfect-forward-secrecy]: https://en.wikipedia.org/wiki/Forward_secrecy
 [post-compromise-security]: https://ieeexplore.ieee.org/document/7536374
 [ssb-uri-spec]: https://github.com/ssbc/ssb-uri-spec
+
+[subset]: https://en.wikipedia.org/wiki/Subset
+[proper subset]: https://en.wikipedia.org/wiki/Subset
+[union]: https://en.wikipedia.org/wiki/Union_(set_theory)
+[intersection]: https://en.wikipedia.org/wiki/Intersection_(set_theory)
+[set difference]: https://en.wikipedia.org/wiki/Complement_(set_theory)#Relative_complement
+[symmetric difference]: https://en.wikipedia.org/wiki/Symmetric_difference
