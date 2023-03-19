@@ -127,12 +127,11 @@ Some mathematical set relations will be useful throughout this specification.
 For two sets `A` and `B`, we use the notation:
 
 * `A = B` : `A` is equivalent to `B`
-* `A ⊆ B` : `A` is a [subset] of `B`
-* `A ⊂ B` : `A` is a [proper subset] of `B` ("A is a susbet of B, AND A is NOT equivalent to B")
+* `A ⊂ B` : `A` is a [proper subset] of `B` ("A is a [susbet] of B, AND A is NOT equivalent to B")
 * `A ∩ B` : the [intersection] of `A` and `B` (the set of elements in both `A` AND `B`)
 * `A ∪ B` : the [union] of `A` and `B` (the set of elements in `A` AND/OR `B`)
 * `A \ B` : the [set difference] of `A` and `B` (the set of elements in `A` but not in `B`)
-* `A △ B` : the [symmetric difference] (the set of elements in the union, but NOT in the intersection)
+* `∅` : the "empty set" (the set which has no elements)
 
 
 ## 4. Functional Specification
@@ -233,9 +232,9 @@ epoch key is considered the winner.
 Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key is the
 winner according to the tie-breaking rule (section 4.3.).
 
-If `members(L) = members(R)`, then all peers in `common(L,R)` who detect the
-existence of both `L` and `R` MUST select `L` as the preferred epoch (determined
-by the tie-breaking rule) over `R`. See figure 2.
+If `members(L) = members(R)`, then all peers who detect the existence of both
+`L` and `R` MUST select `L` as the preferred epoch (determined by the tie-
+breaking rule) over `R`. See figure 2.
 
 ```mermaid
 ---
@@ -249,21 +248,19 @@ graph TB;
 ```
 
 Here we addressed two forked epochs.  In the generalized case where two or more
-forked epochs have the same `common` membership, then the tie-breaking rule
-(section 4.3.) is used to select the preferred epoch.  The tie-breaking rule
-supports multiple inputs.
-
-// TODO have deleted a diagram, need to -1 on all figure numbers after this
+forked epochs have the same membership, then the tie-breaking rule (section 4.3.)
+is used to select the preferred epoch.  The tie-breaking rule supports multiple
+inputs.
 
 ### 4.5. Resolving forked epochs with subset membership
 
 Suppose there are two forked epochs `L` and `R`.  If `members(L) ⊂ members(R)`,
-then all fork witnesses `forWithness(L,R)` who detect the existence of both `L`
-and `R` MUST select `L` as the preferred epoch over `R`. See figure 4.
+then all fork witnesses `forkWitness(L,R)` who detect the existence of both `L`
+and `R` MUST select `L` as the preferred epoch over `R`. See figure 3.
 
 ```mermaid
 ---
-title: Figure 4
+title: Figure 3
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -273,12 +270,11 @@ graph TB;
 ```
 
 Further, if a member `b` in `R` adds a new member `e` to `R`, then `b` MUST
-add `e` to `L` as soon as `b` detects the existence of `L` (figure 5).
-
+add `e` to `L` as soon as `b` detects the existence of `L` (figure 4).
 
 ```mermaid
 ---
-title: Figure 5
+title: Figure 4
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -305,12 +301,12 @@ membership i.e. the intersection is not the empty set
 members(L) ∩ members(R) ≠ ∅ 
 ```
 
-then any member in `witnessFork(L,R)` SHOULD create a new epoch directly 
-succeeding `L`, excluding all peers in `members(L) \ members(R)`. See figure 6.
+then any member in `forkWitness(L,R)` SHOULD create a new epoch directly 
+succeeding `L`, excluding all peers that were excluded in `R`. See figure 5.
 
 ```mermaid
 ---
-title: Figure 6
+title: Figure 5
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -322,16 +318,39 @@ graph TB;
 
 It is RECOMMENDED that a peer waits a random amount of time before performing
 the exclusion, to give opportunity for some other peer to perform the exclusion
-first.  If a peer in `common(L,R) ∩ common(R,L)` detects a new epoch `L2`
+first.  If a peer in `witnessFork(L,R)` detects a new epoch `L2`
 directly succeeding `L`, then this peer MUST NOT perform the exclusion, but
 SHOULD select `L2` as preferred over `L`.
-
-// TODO need to address the case where there has been additions (as we discuss in 4.5)
 
 However, it is possible that two or more peers perform exclusions, which leads
 to forked epochs with the same membership, where the rules from section 4.4.
 would apply in order to resolve that situation.
 
+In the case that there have been new additions to each epoch, we ensure that 
+those are conserved in the final preferred epoch. In the example in figure 6, `e`
+has been added to `L`, and `f` has been added to `R`, so these two will be added
+to the final preferred epoch `L2`
+
+```mermaid
+---
+title: Figure 6
+---
+graph TB;
+  zero[X: a,b,c,d]
+  zero--"a excludes c, adds e"-->L[L: a,b,d,e]
+  zero--"b excludes d, adds f"-->R[R: a,b,c,f]
+  L--"a excludes d, adds e,f"-->L2[L2: a,b,e,f]
+  R-.->L2
+```
+
+You can calculate who should be in the final preferred epoch as:
+
+```
+L2 = (the witnesses to the fork) U (the new people added)
+   = (members(L) ∩ members(R) ∩ members(X)) ∪ ((members(L) ∪ members(R)) \ members(X))
+   = [a,b] ∪ [e,f]
+   = [a,b,e,f]
+```
 
 ### 4.7. Forked epochs with disjoint membership
 
@@ -351,9 +370,8 @@ graph TB;
   zero--"c excludes a,b"-->R[R: c,d]
 ```
 
-However, if a member is added to `L` or `R` such that the intersection
-`common(L,R) ∩ common(R,L)` would be non-empty, then the rules in sections 4.4.
-or 4.5. or 4.6. would apply. See figure 8.
+However, if a member is added to `L` or `R` such that the  `forkWitness(L,R)` would 
+be non-empty, then the rules in sections 4.4. or 4.5. or 4.6. would apply. See figure 8.
 
 ```mermaid
 ---
@@ -399,13 +417,13 @@ As soon as a peer `a` has discovered their most preferred epoch `H`:
 * 4.8.2.A. `a` SHOULD cease fetching messages from group feeds of other epochs
 `X` belonging to a member that was excluded from `X`, but should continue to
 fetch messages from group feeds belonging to any remaining member of `X`. See
-figure 9 as an example.
+figure 8 as an example.
 * 4.8.2.B. `a` SHOULD continue to serve messages from group feeds of any epoch
 `X` belonging to **any** member of `X`.
 
 ```mermaid
 ---
-title: Figure 9
+title: Figure 8
 ---
 graph LR;
   afetch[a fetches]
@@ -496,4 +514,3 @@ not found a tie-breaking rule with all three properties, so this is future work.
 [union]: https://en.wikipedia.org/wiki/Union_(set_theory)
 [intersection]: https://en.wikipedia.org/wiki/Intersection_(set_theory)
 [set difference]: https://en.wikipedia.org/wiki/Complement_(set_theory)#Relative_complement
-[symmetric difference]: https://en.wikipedia.org/wiki/Symmetric_difference
