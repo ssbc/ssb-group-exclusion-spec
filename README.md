@@ -120,15 +120,15 @@ to `H` is the intersection of the declared members of `G` with the declared
 members of `X`.
 
 Some mathematical set relations will be useful throughout this specification.
-We shall denote:
+For two sets `A` and `B`, we use the notation:
 
-* The equivalence of two sets `A` and `B` as `A = B`
-* The intersection as `A ∩ B`
-* The union as `A ∪ B`
-* The set difference as `A \ B`
-* The symmetric difference as `A △ B`
-* The subset relation as `A ⊆ B`
-* The proper subset relation as `A ⊂ B`
+* `A = B` : `A` is equivalent to `B`
+* `A ⊆ B` : `A` is a [subset] of `B`
+* `A ⊂ B` : `A` is a [proper subset] of `B` ("A is a susbet of B, AND A is NOT equivalent to B")
+* `A ∩ B` : the [intersection] of `A` and `B` (the set of elements in both `A` AND `B`)
+* `A ∪ B` : the [union] of `A` and `B` (the set of elements in `A` AND/OR `B`)
+* `A \ B` : the [set difference] of `A` and `B` (the set of elements in `A` but not in `B`)
+* `A △ B` : the [symmetric difference] (the set of elements in the union, but NOT in the intersection)
 
 For instance, the common members of `G` with respect to `H` can be denoted as:
 
@@ -494,3 +494,10 @@ not found a tie-breaking rule with all three properties, so this is future work.
 [perfect-forward-secrecy]: https://en.wikipedia.org/wiki/Forward_secrecy
 [post-compromise-security]: https://ieeexplore.ieee.org/document/7536374
 [ssb-uri-spec]: https://github.com/ssbc/ssb-uri-spec
+
+[subset]: https://en.wikipedia.org/wiki/Subset
+[proper subset]: https://en.wikipedia.org/wiki/Subset
+[union]: https://en.wikipedia.org/wiki/Union_(set_theory)
+[intersection]: https://en.wikipedia.org/wiki/Intersection_(set_theory)
+[set difference]: https://en.wikipedia.org/wiki/Complement_(set_theory)#Relative_complement
+[symmetric difference]: https://en.wikipedia.org/wiki/Symmetric_difference
