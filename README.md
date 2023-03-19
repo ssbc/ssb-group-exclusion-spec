@@ -338,6 +338,8 @@ first.  If a peer in `common(L,R) ∩ common(R,L)` detects a new epoch `L2`
 directly succeeding `L`, then this peer MUST NOT perform the exclusion, but
 SHOULD select `L2` as preferred over `L`.
 
+// TODO need to address the case where there has been additions (as we discuss in 4.5)
+
 However, it is possible that two or more peers perform exclusions, which leads
 to forked epochs with the same membership, where the rules from section 4.4.
 would apply in order to resolve that situation.
@@ -345,10 +347,10 @@ would apply in order to resolve that situation.
 
 ### 4.7. Forked epochs with disjoint membership
 
-Suppose there are two forked epochs `L` and `R`.  If `common(L,R) ∩ common(R,L)`
-is empty, then nothing needs to be performed in this situation, because the
-forked epochs represent two disjoint contexts.  From the perspective of peers in
-`members(L)`, epoch `R` does not exist, and from the perspective of peers in
+Suppose there are two forked epochs `L` and `R`.  If there are no witnesses of the
+fork, i.e. `forkWitness(L,R) = ∅`, then nothing needs to be performed in this situation,
+because the forked epochs represent two disjoint contexts.  From the perspective
+of peers in `members(L)`, epoch `R` does not exist, and from the perspective of peers in
 `members(R)`, epoch `L` does not exist. See figure 7.
 
 ```mermaid
