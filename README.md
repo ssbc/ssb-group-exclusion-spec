@@ -269,25 +269,6 @@ graph TB;
   R-. a,b prefer L .->L
 ```
 
-Further, if a member `b` in `R` adds a new member `e` to `R`, then `b` MUST
-add `e` to `L` as soon as `b` detects the existence of `L` (figure 4).
-
-```mermaid
----
-title: Figure 4
----
-graph TB;
-  zero[X: a,b,c,d]
-  zero--"a excludes c,d"-->L[L: a,b]
-  zero--"b excludes d, adds e"-->R[R: a,b,c,e]
-  R-. a,b prefer L .->L
-  L-. b adds e .->L2[L: a,b,e]
-```
-
-These members can be calculated as:
-```
-toAdd = members(R) \ members(X)
-```
 
 ### 4.6. Resolving forked epochs with overlapping membership
 
@@ -326,30 +307,11 @@ However, it is possible that two or more peers perform exclusions, which leads
 to forked epochs with the same membership, where the rules from section 4.4.
 would apply in order to resolve that situation.
 
-In the case that there have been new additions to each epoch, we ensure that 
-those are conserved in the final preferred epoch. In the example in figure 6, `e`
-has been added to `L`, and `f` has been added to `R`, so these two will be added
-to the final preferred epoch `L2`
-
-```mermaid
----
-title: Figure 6
----
-graph TB;
-  zero[X: a,b,c,d]
-  zero--"a excludes c, adds e"-->L[L: a,b,d,e]
-  zero--"b excludes d, adds f"-->R[R: a,b,c,f]
-  L--"a excludes d, adds e,f"-->L2[L2: a,b,e,f]
-  R-.->L2
-```
-
 You can calculate who should be in the final preferred epoch as:
-
 ```
-L2 = (the witnesses to the fork) U (the new people added)
-   = (members(L) ∩ members(R) ∩ members(X)) ∪ ((members(L) ∪ members(R)) \ members(X))
-   = [a,b] ∪ [e,f]
-   = [a,b,e,f]
+L2 = the witnesses to the fork
+   = members(L) ∩ members(R) ∩ members(X)
+   = [a,b]
 ```
 
 ### 4.7. Forked epochs with disjoint membership
@@ -441,6 +403,61 @@ graph LR;
 
   style afetch fill:#0000,stroke:#0000;
 ```
+
+## 4.9 Adding new members
+
+When adding a new member to the group, you MUST add them to all the epochs in the
+history of the group, starting with epoch 0, and ending with the latest preferred
+epoch.
+We add them to all epochs (even ultimately non-preferred epochs) because content
+may have been published in these forks, and we want everyone to be reading the
+same context.
+
+In figure 9, `b` adds `e` to the group, meaning they add them to all the epochs
+they can see.
+```mermaid
+---
+title: Figure 9
+---
+graph TB;
+  A0[X: a,b,c,d]
+  A0--"b excludes c"--> B0[Y: a,b]
+  
+  A[X: a,b,c,d,<b>e</b>]
+  A-."b adds e".->A
+  A--"b excludes c"-->B[Y: a,b,d,<b>e</b>]
+  B-."b adds e".->B
+```
+
+
+Later `b` discovers another epoch `Z` (which hasn't had `e` added):
+
+```mermaid
+---
+title: Figure 10
+---
+graph TB;
+  A[X: a,b,c,d,<b>e</b>]
+  A--"b excludes c"-->B[Y: a,b,d,<b>e</b>]
+  A--"a excludes c,d"-->C[Z: a,b]
+```
+
+Any member moving to create a new epoch, MUST ensure epochs have the correct
+membership before proceeding.
+
+The "correct membership" for a particular epoch is calculated as the summation
+of new members mentioned in all `group/add-member` messages for the group, less
+the summation of excluded members mentioned in `group/exclude` _up till that epoch_.
+
+In epoch `Z` in figure 10 (above), the correct membership is:
+```
+  (all additions) \ (all exclusions leading up to Z)
+= [a,b,c,d,e] \ [c,d]
+= [a,b,e]
+```
+
+From this we can see `e` must be added to epoch `Z` to bring it up to "correct
+membership".
 
 
 ## 5. Security and Privacy Considerations
