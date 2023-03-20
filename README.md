@@ -131,6 +131,7 @@ For two sets `A` and `B`, we use the notation:
 * `A ∩ B` : the [intersection] of `A` and `B` (the set of elements in both `A` AND `B`)
 * `A ∪ B` : the [union] of `A` and `B` (the set of elements in `A` AND/OR `B`)
 * `A \ B` : the [set difference] of `A` and `B` (the set of elements in `A` but not in `B`)
+* `A △ B` : the [symmetric difference] (the set of elements in the union, but NOT in the intersection)
 * `∅` : the "empty set" (the set which has no elements)
 
 
@@ -156,7 +157,7 @@ arrive at a common epoch as the new singleton context.
 ### 4.1. Excluding a member
 
 Suppose there is an epoch `G` that  is the "most preferred epoch" among all the
-epochs that `a` is a member of, which succeed a certain epoch zero. To exclude 
+epochs that `a` is a member of, which succeed a certain epoch zero. To exclude
 member `c` from `G`, some member `a` (who MUST NOT be `c`) publishes to epoch `G`
 that `c` will be excluded, creates a new epoch `H`, and adds all declared group
 members of `G` minus `c` as the members of `H`. See figure 1 as an example, and
@@ -230,9 +231,9 @@ epoch key is considered the winner.
 Suppose there are two forked epochs `L` and `R`, and `L`'s epoch key is the
 winner according to the tie-breaking rule (section 4.3.).
 
-If `members(L) = members(R)`, then all peers who detect the existence of both
-`L` and `R` MUST select `L` as the preferred epoch (determined by the tie-
-breaking rule) over `R`. See figure 2.
+If `members(L) = members(R)`, then all peers in `members(L)` who detect the
+existence of both `L` and `R` MUST select `L` as the preferred epoch (determined
+by the tie-breaking rule) over `R`. See figure 2.
 
 ```mermaid
 ---
@@ -253,8 +254,8 @@ inputs.
 ### 4.5. Resolving forked epochs with subset membership
 
 Suppose there are two forked epochs `L` and `R`.  If `members(L) ⊂ members(R)`,
-then all fork witnesses `forkWitness(L,R)` who detect the existence of both `L`
-and `R` MUST select `L` as the preferred epoch over `R`. See figure 3.
+then all peers in `forkWitness(L,R)` who detect the existence of both `L` and
+`R` MUST select `L` as the preferred epoch over `R`.  See figure 3.
 
 ```mermaid
 ---
@@ -277,15 +278,21 @@ If `L` and `R` are neither equivalent, nor subsets, but there is overlapping
 membership i.e. the intersection is not the empty set
 
 ```
-members(L) ∩ members(R) ≠ ∅ 
+members(L) ∩ members(R) ≠ ∅
 ```
 
-then any member in `forkWitness(L,R)` SHOULD create a new epoch directly 
-succeeding `L`, excluding all peers that were excluded in `R`. See figure 5.
+and the symmetric difference is not the empty set
+
+```
+members(L) △ members(R) ≠ ∅
+```
+
+then any peer in `forkWitness(L,R)` SHOULD create a new epoch directly
+succeeding `L`, excluding all peers that were excluded in `R`. See figure 4.
 
 ```mermaid
 ---
-title: Figure 5
+title: Figure 4
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -309,20 +316,20 @@ You can calculate who should be in the final preferred epoch as:
 ```
 L2 = the witnesses to the fork
    = members(L) ∩ members(R) ∩ members(X)
-   = [a,b]
+   = {a,b}
 ```
 
 ### 4.7. Forked epochs with disjoint membership
 
-Suppose there are two forked epochs `L` and `R`.  If there are no witnesses of the
-fork, i.e. `forkWitness(L,R) = ∅`, then nothing needs to be performed in this situation,
-because the forked epochs represent two disjoint contexts.  From the perspective
-of peers in `members(L)`, epoch `R` does not exist, and from the perspective of peers in
-`members(R)`, epoch `L` does not exist. See figure 7.
+Suppose there are two forked epochs `L` and `R`.  If there are no witnesses of
+the fork, i.e. `forkWitness(L,R) = ∅`, then nothing needs to be performed in
+this situation, because the forked epochs represent two disjoint contexts.  From
+the perspective of peers in `members(L)`, epoch `R` does not exist, and from the
+perspective of peers in `members(R)`, epoch `L` does not exist.  See figure 5.
 
 ```mermaid
 ---
-title: Figure 7
+title: Figure 5
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -330,12 +337,13 @@ graph TB;
   zero--"c excludes a,b"-->R[R: c,d]
 ```
 
-However, if a member is added to `L` or `R` such that the  `forkWitness(L,R)` would 
-be non-empty, then the rules in sections 4.4. or 4.5. or 4.6. would apply. See figure 8.
+However, if a member is added to `L` or `R` such that the `forkWitness(L,R)`
+would be non-empty, then the rules in sections 4.4. or 4.5. or 4.6. would apply.
+See figure 6.
 
 ```mermaid
 ---
-title: Figure 8
+title: Figure 6
 ---
 graph TB;
   zero[X: a,b,c,d]
@@ -383,7 +391,7 @@ figure 8 as an example.
 
 ```mermaid
 ---
-title: Figure 8
+title: Figure 7
 ---
 graph LR;
   afetch[a fetches]
@@ -404,35 +412,36 @@ graph LR;
 
 ## 4.9 Adding new members
 
-When adding a new member to the group, you MUST add them to all the epochs in the
-history of the group, starting with epoch 0, and ending with the latest preferred
-epoch.
-We add them to all epochs (even ultimately non-preferred epochs) because content
-may have been published in these forks, and we want everyone to be reading the
-same context.
+When adding a new member to the group, you MUST add them to all the epochs in
+the history of the group, starting with epoch 0, and ending with the latest
+preferred epoch.
 
-In figure 9, `b` adds `e` to the group, meaning they add them to all the epochs
+We add them to all epochs (even non-preferred epochs) because content may have
+been published in these forks, and we want everyone to be reading the same
+context.
+
+In figure 8, `b` adds `e` to the group, meaning they add them to all the epochs
 they can see.
+
 ```mermaid
 ---
-title: Figure 9
+title: Figure 8
 ---
 graph TB;
   A0[X: a,b,c,d]
   A0--"b excludes c"--> B0[Y: a,b]
-  
+
   A[X: a,b,c,d,<b>e</b>]
   A-."b adds e".->A
   A--"b excludes c"-->B[Y: a,b,d,<b>e</b>]
   B-."b adds e".->B
 ```
 
-
-Later `b` discovers another epoch `Z` (which hasn't had `e` added):
+Later, if `b` discovers another epoch `Z` (which hasn't had `e` added):
 
 ```mermaid
 ---
-title: Figure 10
+title: Figure 9
 ---
 graph TB;
   A[X: a,b,c,d,<b>e</b>]
@@ -443,15 +452,16 @@ graph TB;
 Any member moving to create a new epoch, MUST ensure epochs have the correct
 membership before proceeding.
 
-The "correct membership" for a particular epoch is calculated as the summation
-of new members mentioned in all `group/add-member` messages for the group, less
-the summation of excluded members mentioned in `group/exclude` _up till that epoch_.
+The "correct membership" for a particular epoch is calculated as the union of
+all declared members in all epochs, minus the union of all excluded members in
+any epoch *up till that epoch*.
 
-In epoch `Z` in figure 10 (above), the correct membership is:
+In epoch `Z` in figure 9 (above), the correct membership is:
+
 ```
-  (all additions) \ (all exclusions leading up to Z)
-= [a,b,c,d,e] \ [c,d]
-= [a,b,e]
+  (all member additions) \ (all member exclusions leading up to Z)
+= {a,b,c,d,e} \ {c,d}
+= {a,b,e}
 ```
 
 From this we can see `e` must be added to epoch `Z` to bring it up to "correct
@@ -529,3 +539,4 @@ not found a tie-breaking rule with all three properties, so this is future work.
 [union]: https://en.wikipedia.org/wiki/Union_(set_theory)
 [intersection]: https://en.wikipedia.org/wiki/Intersection_(set_theory)
 [set difference]: https://en.wikipedia.org/wiki/Complement_(set_theory)#Relative_complement
+[symmetric difference]: https://en.wikipedia.org/wiki/Symmetric_difference
