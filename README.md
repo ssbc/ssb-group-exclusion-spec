@@ -541,7 +541,7 @@ subgraph "feed"
 d-->c-->b-->a
 end
 
-classDef default stroke:#ccc,fill:#eee;
+classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster stroke:#333,fill:none;
 ```
 
@@ -567,7 +567,7 @@ flowchart RL
 M-->X-->B-->A
 M-->Y--->B
 
-classDef default stroke:none;
+classDef default stroke:none,color:#333;
 classDef alice fill:#ccf;
 classDef bob fill:#cfc;
 
@@ -645,7 +645,7 @@ end
 0_add_1 --> 0_add_0 --> 0_init
 linkStyle 0,1 stroke:#118AB2,stroke-width:3;
 
-classDef default stroke:#ccc,fill:#eee;
+classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
@@ -694,7 +694,7 @@ end
 linkStyle 0 stroke:#EF476F,stroke-width:2;
 
 
-classDef default stroke:#ccc,fill:#eee;
+classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
@@ -734,7 +734,7 @@ M -.-> X & Y -.-> B -.-> A
 
 linkStyle 0,1,2,3,4 stroke:#FFD166,stroke-width:4;
 
-classDef default stroke:none,fill:#ccf;
+classDef default stroke:none,fill:#ccf,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ````
 -->
@@ -778,7 +778,7 @@ linkStyle 4 stroke:#06D6A0,stroke-width:3;
 1_add_0 -.- 1_init -.- 0_remove_2 -.- 0_add_1 -.- 0_add_0 -.- 0_init
 linkStyle 5,6,7,8,9 stroke:#FFD166,stroke-width:4;
 
-classDef default stroke:#ccc,fill:#eee;
+classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
@@ -797,7 +797,7 @@ linkStyle 1 stroke:#06D6A0,stroke-width:3;
 linkStyle 2 stroke:#EF476F,stroke-width:2;
 linkStyle 3 stroke:#FFD166,stroke-width:4;
 
-classDef default fill:#fff,stroke:none,color:#222;
+classDef default fill:#fff,stroke:none,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
