@@ -514,7 +514,6 @@ from that point, checking the validity of messages as they are added. Some
 candidate messages may not have connections to the graph, or may be "invalid"
 extentions, in which case they are excluded from the tangle.
 
-
 ### 6.1. Classic feed tangle
 
 The most trivial tangle is the classic scuttelbutt feed. In this case, the
@@ -554,6 +553,7 @@ d => { sequence: 3, previous: d }
 ```
 (author, signature, and content have been ommited here to make the backlinking 
 pattern clearer)
+
 
 ### 6.2. Multi author tangle
 
@@ -597,8 +597,7 @@ so it sets it's `root` value as `null`, which means "I am a root"
 
 
 <!-- Specificic to private groups -->
-
-#### 6.2.1. Members tangle
+### 6.2.1. Members tangle
 
 The purpose of this tangle is to track the group membership (for a  particular 
 epoch of the group).
@@ -649,7 +648,7 @@ classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
-#### 6.2.2. Epoch tangle
+### 6.2.2. Epoch tangle
 
 The purpose of the epoch tangle is to track progression of epochs that
 constitutes each group.
@@ -698,7 +697,7 @@ classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
-#### 6.2.3. Group tangle
+### 6.2.3. Group tangle
 
 The purpose of the group tangle is to clearly identify all messages which are
 part of a particular group, and provide partial causal ordering.
@@ -738,7 +737,6 @@ classDef default stroke:none,fill:#ccf,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ````
 -->
-
 
 
 ### 6.2.4. Using all the tangles together
