@@ -498,9 +498,335 @@ group members to eventually converge on a single most preferred epoch.  We have
 not found a tie-breaking rule with all three properties, so this is future work.
 
 
-## 6. References
+## 6. Tangles
 
-### 6.1. Normative References
+A "tangle" in scuttlebutt is a way to define a directed acyclic graph (DAG) of 
+messages. They are a useful way to determine a partial ordering which is
+useful for everything from replication to building multi-writer "records".
+
+There are different types of tangle, but they all must specify:
+1. **candidate messages**: the set of messages which _could_ be part of the
+   tangle
+2. **a recipe**: how the tangle (DAG) is constructed from these candidates
+
+It is common for the recipe to start with some "root message" and extend out
+from that point, checking the validity of messages as they are added. Some 
+candidate messages may not have connections to the graph, or may be "invalid"
+extentions, in which case they are excluded from the tangle.
+
+
+### 6.1. Classic feed tangle
+
+The most trivial tangle is the classic scuttelbutt feed. In this case, the
+tangle for feed `A` is defined as:
+
+1. **candidate messages**:
+   - have `msg.value.author == A`
+   - have `msg.value.signature` which is the signature of `msg.value.content` by `A`
+2. **recipe**:
+   - find the message with `msg.value.sequence == 1` as your "root"
+       - check it's signed correctly `A`
+   - find the message with `msg.value.sequence == 2`
+       - check it's signed correctly by `A`
+       - check `msg.value.previous` points to the previous message
+       - if all that's fine, add this message to the chain
+   - repeat (incrementing the sequence)
+   
+   
+```mermaid
+flowchart RL
+
+subgraph "feed"
+  direction RL
+d-->c-->b-->a
+end
+
+classDef default stroke:#ccc,fill:#eee;
+classDef cluster stroke:#333,fill:none;
+```
+
+The tangle data these messages carry looks like:
+```javascript
+a => { sequence: 1, previous: null }
+b => { sequence: 2, previous: a }
+c => { sequence: 3, previous: b }
+d => { sequence: 3, previous: d }
+```
+(author, signature, and content have been ommited here to make the backlinking 
+pattern clearer)
+
+### 6.2. Multi author tangle
+
+In the case of multiple authors, you need to be able to support a DAG which 
+branches and merges (because different authors may contribute concurrently,
+or while offline).
+
+```mermaid
+flowchart RL
+
+M-->X-->B-->A
+M-->Y--->B
+
+classDef default stroke:none;
+classDef alice fill:#ccf;
+classDef bob fill:#cfc;
+
+class A,X,M alice
+class B,Y bob
+```
+_Diagram where messages X, Y were both published concurrently (so were unaware
+of one another). M is aware of both X and Y, and extends the tangle from them.
+M is now the new "tip" of the tangle._
+
+The tangle data these messages carry looks like:
+```javascript
+A => { root: null, previous: null }
+B => { root: A,    previous: [A] }
+X => { root: A,    previous: [B] }
+Y => { root: A,    previous: [B] }
+M => { root: A,    previous: [X, Y] }
+```
+
+Where:
+- `root` is the id of the root message of the the tangle
+- `previous` is an Array of message ids of the tip(s) / leading edges of the
+  tangle at the time this message was published.
+    
+Note: the root message cannot include its own id (not known until published), 
+so it sets it's `root` value as `null`, which means "I am a root"
+
+
+<!-- Specificic to private groups -->
+
+#### 6.2.1. Members tangle
+
+The purpose of this tangle is to track the group membership (for a  particular 
+epoch of the group).
+
+We define the members tangle for some id `A` as:
+1. **candate messages**:
+   - the root message with id `A` so long as it has
+     ```javascript
+     content.tangles.members = { root: null, previous: null }
+     ```
+   - any messages where
+     ```javascript
+     content.tangles.members = { root: A, previous: [...] }
+     ```
+2. **recipe**:
+    - a) the graph starts with the root message
+    - b) for the current tip(s) of the tangle
+        - find candidate messages which list that tip in the `previous` field   
+          of their tangle data
+        - check that the graph contains each message in `previous`
+            - if it does, add it to the graph
+            - otherwise set it aside till the graph does contain them
+        - newly added messages to the tangle graph constitue new tips
+    - c) repeat (b) till you cannot grow the tangle further
+
+
+In the context of private groups, the addition to a particular epoch is always
+published to an earlier epoch (or in the case of the first epoch, to the
+Additons feed).
+
+```mermaid
+flowchart RL
+
+subgraph Additions
+  0_add_0[add: Alice]
+  0_add_1[add: Bob, Carol]
+end
+
+subgraph epoch_0[Epoch 0]
+  0_init[init]
+end
+
+%% members tangle - epoch 0
+0_add_1 --> 0_add_0 --> 0_init
+linkStyle 0,1 stroke:#118AB2,stroke-width:3;
+
+classDef default stroke:#ccc,fill:#eee;
+classDef cluster fill:#fff,stroke:#000,color:#333;
+```
+
+#### 6.2.2. Epoch tangle
+
+The purpose of the epoch tangle is to track progression of epochs that
+constitutes each group.
+
+For some group id `G`, where `A` is the id of the initial `group/init` message
+(in epoch 0), then define the epoch tangle for `G` as:
+1. **candate messages**:
+   - the root message with id `A` so long as it has
+     ```javascript
+     content.type = 'group/init'
+     content.tangles.epoch = { root: null, previous: null }
+     ```
+   - any messages where
+     ```javascript
+     content.type = 'group/init'
+     content.tangles.epoch = { root: A, previous: [...] }
+     ```
+2. **recipe**:
+    - a) the graph starts with the root message
+    - b) for the current tip(s) of the tangle
+        - find candidate messages which list that tip in the `previous` field   
+          of their tangle data
+        - check that the graph contains each message in `previous`
+            - if it does, add it to the graph
+            - otherwise set it aside till the graph does contain them
+        - newly added messages to the tangle graph constitue new tips
+    - c) repeat (b) till you cannot grow the tangle further
+
+```mermaid
+flowchart RL
+
+subgraph epoch_0[Epoch 0]
+  0_init[init]
+end
+
+subgraph epoch_1[Epoch 1]
+  1_init[init]
+end
+
+%% epoch tangle
+1_init --> 0_init
+linkStyle 0 stroke:#EF476F,stroke-width:2;
+
+
+classDef default stroke:#ccc,fill:#eee;
+classDef cluster fill:#fff,stroke:#000,color:#333;
+```
+
+#### 6.2.3. Group tangle
+
+The purpose of the group tangle is to clearly identify all messages which are
+part of a particular group, and provide partial causal ordering.
+
+For some group id `G`, where `A` is the id of the initial `group/init` message
+(in epoch 0), then define the group tangle for `G` as:
+1. **candate messages**:
+   - the root message with id `A` so long as it has
+     ```javascript
+     content.type = 'group/init'
+     content.tangles.group = { root: null, previous: null }
+     ```
+   - any messages where
+     ```javascript
+     content.tangles.group = { root: A, previous: [...] }
+     ```
+2. **recipe**:
+    - a) the graph starts with the root message
+    - b) for the current tip(s) of the tangle
+        - find candidate messages which list that tip in the `previous` field   
+          of their tangle data
+        - check that the graph contains each message in `previous`
+            - if it does, add it to the graph
+            - otherwise set it aside till the graph does contain them
+        - newly added messages to the tangle graph constitue new tips
+    - c) repeat (b) till you cannot grow the tangle further
+
+<!--
+```mermaid
+flowchart RL
+
+M -.-> X & Y -.-> B -.-> A
+
+linkStyle 0,1,2,3,4 stroke:#FFD166,stroke-width:4;
+
+classDef default stroke:none,fill:#ccf;
+classDef cluster fill:#fff,stroke:#000,color:#333;
+````
+-->
+
+
+
+### 6.2.4. Using all the tangles together
+
+```mermaid
+flowchart RL
+
+subgraph Additions
+  0_add_0[add: A]
+  0_add_1[add: B, C]
+end
+
+subgraph epoch_0[Epoch 0]
+  0_init[init]
+
+  1_add_0[add: A, B]
+  0_remove_2[exclude: C]
+end
+
+subgraph epoch_1[Epoch 1]
+  1_init[init]
+end
+
+%% epoch tangle
+1_init --> 0_init
+linkStyle 0 stroke:#EF476F,stroke-width:2;
+
+%% members tangle - epoch 0
+0_remove_2 --> 0_add_1 --> 0_add_0 --> 0_init
+linkStyle 1,2,3 stroke:#118AB2,stroke-width:3;
+
+%% members tangle - epoch 1
+1_add_0 --> 1_init
+linkStyle 4 stroke:#06D6A0,stroke-width:3;
+
+%% group tangle
+1_add_0 -.- 1_init -.- 0_remove_2 -.- 0_add_1 -.- 0_add_0 -.- 0_init
+linkStyle 5,6,7,8,9 stroke:#FFD166,stroke-width:4;
+
+classDef default stroke:#ccc,fill:#eee;
+classDef cluster fill:#fff,stroke:#000,color:#333;
+```
+
+```mermaid
+flowchart LR
+
+subgraph key
+  direction RL
+  members_0[members tangle 0] -->A[ ]
+  members_1[members tangle 1] -->B[ ]
+  epoch[epoch tangle]         -->C[ ]
+  group[group tangle]        -.->D[ ]
+end
+linkStyle 0 stroke:#118AB2,stroke-width:3;
+linkStyle 1 stroke:#06D6A0,stroke-width:3;
+linkStyle 2 stroke:#EF476F,stroke-width:2;
+linkStyle 3 stroke:#FFD166,stroke-width:4;
+
+classDef default fill:#fff,stroke:none,color:#222;
+classDef cluster fill:#fff,stroke:#000,color:#333;
+```
+
+_NOTE: this diagram shows all nice linear tangles for visual simplicity,
+remember there may be forks and merges because of concurrent publishing._
+
+
+Crucially, the `group/init` messages are involved in 3 tangles, e.g.
+```javascript
+{
+  type: `group/init`,
+  // ...
+  tangles: {
+    group: { root: A, previous: [W, X] },
+    epoch: { root: A, previous: [B] },
+    members: { root: null, previous: null }
+  }
+}
+```
+
+This message says
+1. I am part of a group which started with message `A`, and the last messages I    saw in the group were `W, X`
+2. The root epoch was `A` and the epoch(s) before this one was `B`
+3. I am the root of a new members tangle for this epoch
+
+
+## 7. References
+
+### 7.1. Normative References
 
 - [ssb-meta-feeds-spec] version 1.0
 - [ssb-meta-feeds-group-spec] version 1.0
@@ -508,7 +834,7 @@ not found a tie-breaking rule with all three properties, so this is future work.
 - [private-group-spec] version 2.0.0
 - [ssb-meta-feeds-dm-spec] version 0.1
 
-### 6.2. Informative References
+### 7.2. Informative References
 
 - [private-groups-original-notes]
 - [scuttlebutt-protocol-guide]
@@ -517,6 +843,7 @@ not found a tie-breaking rule with all three properties, so this is future work.
 - [ssb-meta-feeds]
 - [perfect-forward-secrecy]
 - [post-compromise-security]
+
 
 <!-- References -->
 
