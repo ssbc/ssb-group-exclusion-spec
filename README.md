@@ -501,103 +501,10 @@ not found a tie-breaking rule with all three properties, so this is future work.
 ## 6. Tangles
 
 A "tangle" in scuttlebutt is a way to define a directed acyclic graph (DAG) of 
-messages. They are a useful way to determine a partial ordering which is
-useful for everything from replication to building multi-writer "records".
-
-There are different types of tangle, but they all must specify:
-1. **candidate messages**: the set of messages which _could_ be part of the
-   tangle
-2. **a recipe**: how the tangle (DAG) is constructed from these candidates
-
-It is common for the recipe to start with some "root message" and extend out
-from that point, checking the validity of messages as they are added. Some 
-candidate messages may not have connections to the graph, or may be "invalid"
-extentions, in which case they are excluded from the tangle.
-
-### 6.1. Classic feed tangle
-
-The most trivial tangle is the classic scuttelbutt feed. In this case, the
-tangle for feed `A` is defined as:
-
-1. **candidate messages**:
-   - have `msg.value.author == A`
-   - have `msg.value.signature` which is the signature of `msg.value.content` by `A`
-2. **recipe**:
-   - find the message with `msg.value.sequence == 1` as your "root"
-       - check it's signed correctly `A`
-   - find the message with `msg.value.sequence == 2`
-       - check it's signed correctly by `A`
-       - check `msg.value.previous` points to the previous message
-       - if all that's fine, add this message to the chain
-   - repeat (incrementing the sequence)
-   
-   
-```mermaid
-flowchart RL
-
-subgraph "feed"
-  direction RL
-d-->c-->b-->a
-end
-
-classDef default stroke:#ccc,fill:#eee,color:#333;
-classDef cluster stroke:#333,fill:none;
-```
-
-The tangle data these messages carry looks like:
-```javascript
-a => { sequence: 1, previous: null }
-b => { sequence: 2, previous: a }
-c => { sequence: 3, previous: b }
-d => { sequence: 3, previous: d }
-```
-(author, signature, and content have been ommited here to make the backlinking 
-pattern clearer)
+messages. You can read more about them in the [Tangle SIP].
 
 
-### 6.2. Multi author tangle
-
-In the case of multiple authors, you need to be able to support a DAG which 
-branches and merges (because different authors may contribute concurrently,
-or while offline).
-
-```mermaid
-flowchart RL
-
-M-->X-->B-->A
-M-->Y--->B
-
-classDef default stroke:none,color:#333;
-classDef alice fill:#ccf;
-classDef bob fill:#cfc;
-
-class A,X,M alice
-class B,Y bob
-```
-_Diagram where messages X, Y were both published concurrently (so were unaware
-of one another). M is aware of both X and Y, and extends the tangle from them.
-M is now the new "tip" of the tangle._
-
-The tangle data these messages carry looks like:
-```javascript
-A => { root: null, previous: null }
-B => { root: A,    previous: [A] }
-X => { root: A,    previous: [B] }
-Y => { root: A,    previous: [B] }
-M => { root: A,    previous: [X, Y] }
-```
-
-Where:
-- `root` is the id of the root message of the the tangle
-- `previous` is an Array of message ids of the tip(s) / leading edges of the
-  tangle at the time this message was published.
-    
-Note: the root message cannot include its own id (not known until published), 
-so it sets it's `root` value as `null`, which means "I am a root"
-
-
-<!-- Specificic to private groups -->
-### 6.2.1. Members tangle
+### 6.1. Members tangle
 
 The purpose of this tangle is to track the group membership (for a  particular 
 epoch of the group).
@@ -648,7 +555,7 @@ classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
-### 6.2.2. Epoch tangle
+### 6.2. Epoch tangle
 
 The purpose of the epoch tangle is to track progression of epochs that
 constitutes each group.
@@ -697,7 +604,7 @@ classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
-### 6.2.3. Group tangle
+### 6.3. Group tangle
 
 The purpose of the group tangle is to clearly identify all messages which are
 part of a particular group, and provide partial causal ordering.
@@ -739,7 +646,7 @@ classDef cluster fill:#fff,stroke:#000,color:#333;
 -->
 
 
-### 6.2.4. Using all the tangles together
+### 6.4. Using all the tangles together
 
 ```mermaid
 flowchart RL
@@ -858,6 +765,7 @@ This message says
 [perfect-forward-secrecy]: https://en.wikipedia.org/wiki/Forward_secrecy
 [post-compromise-security]: https://ieeexplore.ieee.org/document/7536374
 [ssb-uri-spec]: https://github.com/ssbc/ssb-uri-spec
+[Tangle SIP]: https://github.com/ssbc/sips/blob/master/009.md
 
 [subset]: https://en.wikipedia.org/wiki/Subset
 [proper subset]: https://en.wikipedia.org/wiki/Subset
