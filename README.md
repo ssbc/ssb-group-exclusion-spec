@@ -510,7 +510,7 @@ The purpose of this tangle is to track the group membership (for a  particular
 epoch of the group).
 
 We define the members tangle for some id `A` as:
-1. **candate messages**:
+1. **candidate messages**:
    - the root message with id `A` so long as it has
      ```javascript
      content.tangles.members = { root: null, previous: null }
@@ -533,7 +533,7 @@ We define the members tangle for some id `A` as:
 
 In the context of private groups, the addition to a particular epoch is always
 published to an earlier epoch (or in the case of the first epoch, to the
-Additons feed).
+Additions feed).
 
 ```mermaid
 flowchart RL
@@ -562,7 +562,7 @@ constitutes each group.
 
 For some group id `G`, where `A` is the id of the initial `group/init` message
 (in epoch 0), then define the epoch tangle for `G` as:
-1. **candate messages**:
+1. **candidate messages**:
    - the root message with id `A` so long as it has
      ```javascript
      content.type = 'group/init'
@@ -611,7 +611,7 @@ part of a particular group, and provide partial causal ordering.
 
 For some group id `G`, where `A` is the id of the initial `group/init` message
 (in epoch 0), then define the group tangle for `G` as:
-1. **candate messages**:
+1. **candidate messages**:
    - the root message with id `A` so long as it has
      ```javascript
      content.type = 'group/init'
@@ -646,7 +646,7 @@ classDef cluster fill:#fff,stroke:#000,color:#333;
 -->
 
 
-### 6.4. Using all the tangles together
+### 6.4. Example: using all the tangles together
 
 ```mermaid
 flowchart RL
