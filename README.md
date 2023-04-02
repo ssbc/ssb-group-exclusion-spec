@@ -479,7 +479,7 @@ messages. You can read more about them in the [Tangle SIP].
 The purpose of this tangle is to track the group membership (for a  particular 
 epoch of the group).
 
-We define the members tangle for some id `A` as:
+We define the members tangle for some message ID `A`as:
 1. **candidate messages**:
    - the root message with id `A` so long as it has
      ```javascript
