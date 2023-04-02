@@ -468,43 +468,13 @@ From this we can see `e` must be added to epoch `Z` to bring it up to "correct
 membership".
 
 
-## 5. Security and Privacy Considerations
-
-
-### 5.1. Excluded members can read old messages
-
-An excluded member can still read and preserve all of the messages up until the
-point they were excluded, and this could be used maliciously to extract as much
-information from other group members as possible, for instance by analysing the
-timestamps of messages published to the group and deriving suitable timezones
-for each peer.
-
-
-### 5.2. Weak tie-breaking rule
-
-The tie-breaking rule is simple and easy to implement, but it can be gamed such
-that a malicious group member can force their forked epoch to be preferred over
-others.  This can be achieved by brute-forcing the epoch ID until it is
-lexicographically "small" (such as starting with the character `0`).  It is
-currently unknown how this weakness can be exploited to degrade security or
-privacy, but at the very least it reduces fairness and randomness in choosing
-preferred epochs.
-
-A better tie-breaking rule would have the property that gives each
-epoch-creating peer no information on how "strong" their epoch key in winning
-a tie-break.  However, we also require tie-breaking rules to be deterministic,
-and to create a total order between a set of forked epochs, because we need
-group members to eventually converge on a single most preferred epoch.  We have
-not found a tie-breaking rule with all three properties, so this is future work.
-
-
-## 6. Tangles
+## 4.10. Tangles
 
 A "tangle" in scuttlebutt is a way to define a directed acyclic graph (DAG) of 
 messages. You can read more about them in the [Tangle SIP].
 
 
-### 6.1. Members tangle
+### 4.10.1. Members tangle
 
 The purpose of this tangle is to track the group membership (for a  particular 
 epoch of the group).
@@ -555,7 +525,7 @@ classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
-### 6.2. Epoch tangle
+### 4.10.2. Epoch tangle
 
 The purpose of the epoch tangle is to track progression of epochs that
 constitutes each group.
@@ -604,7 +574,7 @@ classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
-### 6.3. Group tangle
+### 4.10.3. Group tangle
 
 The purpose of the group tangle is to clearly identify all messages which are
 part of a particular group, and provide partial causal ordering.
@@ -646,7 +616,7 @@ classDef cluster fill:#fff,stroke:#000,color:#333;
 -->
 
 
-### 6.4. Example: using all the tangles together
+### 4.10.4. Example: using all the tangles together
 
 In this section we provide an example that illustrates the presence of all three group-related tangles.
 Suppose peer Z creates a group and performs the following actions, in this order:
@@ -739,9 +709,41 @@ This message says
 3. I am the root of a new members tangle for this epoch
 
 
-## 7. References
 
-### 7.1. Normative References
+## 5. Security and Privacy Considerations
+
+
+### 5.1. Excluded members can read old messages
+
+An excluded member can still read and preserve all of the messages up until the
+point they were excluded, and this could be used maliciously to extract as much
+information from other group members as possible, for instance by analysing the
+timestamps of messages published to the group and deriving suitable timezones
+for each peer.
+
+
+### 5.2. Weak tie-breaking rule
+
+The tie-breaking rule is simple and easy to implement, but it can be gamed such
+that a malicious group member can force their forked epoch to be preferred over
+others.  This can be achieved by brute-forcing the epoch ID until it is
+lexicographically "small" (such as starting with the character `0`).  It is
+currently unknown how this weakness can be exploited to degrade security or
+privacy, but at the very least it reduces fairness and randomness in choosing
+preferred epochs.
+
+A better tie-breaking rule would have the property that gives each
+epoch-creating peer no information on how "strong" their epoch key in winning
+a tie-break.  However, we also require tie-breaking rules to be deterministic,
+and to create a total order between a set of forked epochs, because we need
+group members to eventually converge on a single most preferred epoch.  We have
+not found a tie-breaking rule with all three properties, so this is future work.
+
+
+
+## 6. References
+
+### 6.1. Normative References
 
 - [ssb-meta-feeds-spec] version 1.0
 - [ssb-meta-feeds-group-spec] version 1.0
@@ -749,7 +751,7 @@ This message says
 - [private-group-spec] version 2.0.0
 - [ssb-meta-feeds-dm-spec] version 0.1
 
-### 7.2. Informative References
+### 6.2. Informative References
 
 - [private-groups-original-notes]
 - [scuttlebutt-protocol-guide]
