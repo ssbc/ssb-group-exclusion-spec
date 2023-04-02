@@ -648,6 +648,16 @@ classDef cluster fill:#fff,stroke:#000,color:#333;
 
 ### 6.4. Example: using all the tangles together
 
+In this section we provide an example that illustrates the presence of all three group-related tangles.
+Suppose peer Z creates a group and performs the following actions, in this order:
+
+1. Adds peer A to the group at epoch 0
+2. Adds peers B and C to the group at epoch 0
+3. Excludes peer C, thus creating epoch 1
+4. Re-adds peers A and B to the group, now at epoch 1
+
+Then the following diagram illustrates Z's feeds (additions feed, epoch 0 feed, epoch 1 feed) and its
+messages:
 ```mermaid
 flowchart RL
 
