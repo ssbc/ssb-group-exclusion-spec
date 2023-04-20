@@ -470,40 +470,36 @@ membership".
 
 ## 4.10. Tangles
 
-A "tangle" in scuttlebutt is a way to define a directed acyclic graph (DAG) of 
+A "tangle" in scuttlebutt is a way to define a directed acyclic graph (DAG) of
 messages. You can read more about them in the [Tangle SIP].
 
 
 ### 4.10.1. Members tangle
 
-The purpose of this tangle is to track the group membership (for a  particular 
-epoch of the group).
+The purpose of the members tangle is to group and partially order all messages
+that alter the group membership during a single epoch.  A peer can calculate
+the Set of members in an epoch by [reducing] the messages in this tangle.  Each
+epoch will have its own members tangle.  The human-friendly name in the tangle
+data is the string `members`.
 
-We define the members tangle for some message ID `A`as:
-1. **candidate messages**:
-   - the root message with id `A` so long as it has
-     ```javascript
-     content.tangles.members = { root: null, previous: null }
-     ```
-   - any messages where
-     ```javascript
-     content.tangles.members = { root: A, previous: [...] }
-     ```
-2. **recipe**:
-    - a) the graph starts with the root message
-    - b) for the current tip(s) of the tangle
-        - find candidate messages which list that tip in the `previous` field   
-          of their tangle data
-        - check that the graph contains each message in `previous`
-            - if it does, add it to the graph
-            - otherwise set it aside till the graph does contain them
-        - newly added messages to the tangle graph constitue new tips
-    - c) repeat (b) till you cannot grow the tangle further
+We construct the members tangle for some epoch `E` of a group `G` as:
 
+1. **Candidate messages**:
+    - The message with `content.type` equal to `group/init` which started epoch
+    `E`
+    - Any message published on the epoch feed for `E` where `content.type` is
+    equal to `group/add-member`
+    - Any message published on the epoch feed for `E` where `content.type` is
+    equal to `group/exclude`
+2. **Recipe**:
+    - If the candidate message has `content.type` equal to `group/init`, then
+    the tangle data MUST be `{"root": null, "previous": null}`.
+    - Otherwise, the candidate message's tangle data MUST have `root` equal to
+    the ID of the root message `R`, and `previous` SHOULD be an array of message
+    IDs for all locally known "tips" of the tangle
 
-In the context of private groups, the addition to a particular epoch is always
-published to an earlier epoch (or in the case of the first epoch, to the
-Additions feed).
+The diagram below shows an example of the members tangle for a group with only
+epoch zero.
 
 ```mermaid
 flowchart RL
@@ -519,40 +515,36 @@ end
 
 %% members tangle - epoch 0
 0_add_1 --> 0_add_0 --> 0_init
-linkStyle 0,1 stroke:#118AB2,stroke-width:3;
+linkStyle 0,1 stroke:#118AB2,stroke-width:2;
 
 classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
+
 ### 4.10.2. Epoch tangle
 
-The purpose of the epoch tangle is to track progression of epochs that
-constitutes each group.
+The purpose of the epoch tangle is to group and partially order all messages
+that create epochs in a group.  A peer can reduce these messages to discover the
+preferred epoch and detect forked epochs.  Its human-friendly name in the tangle
+data is the string `epoch`.
 
-For some group id `G`, where `A` is the id of the initial `group/init` message
-(in epoch 0), then define the epoch tangle for `G` as:
-1. **candidate messages**:
-   - the root message with id `A` so long as it has
-     ```javascript
-     content.type = 'group/init'
-     content.tangles.epoch = { root: null, previous: null }
-     ```
-   - any messages where
-     ```javascript
-     content.type = 'group/init'
-     content.tangles.epoch = { root: A, previous: [...] }
-     ```
-2. **recipe**:
-    - a) the graph starts with the root message
-    - b) for the current tip(s) of the tangle
-        - find candidate messages which list that tip in the `previous` field   
-          of their tangle data
-        - check that the graph contains each message in `previous`
-            - if it does, add it to the graph
-            - otherwise set it aside till the graph does contain them
-        - newly added messages to the tangle graph constitue new tips
-    - c) repeat (b) till you cannot grow the tangle further
+We construct the epoch tangle for some group `G` based on its root message `R`
+as:
+
+1. **Candidate messages**:
+    - The root message `R`
+    - Any message where `content.type` is equal to `group/init` and the first
+    key in `content.recps` is the ID of `G`
+2. **Recipe**:
+    - If the candidate message is `R`, then the tangle data MUST be
+    `{"root": null, "previous": null}`.
+    - Otherwise, the candidate message's tangle data MUST have `root` equal to
+    the ID of the root message `R`, and `previous` SHOULD be an array of message
+    IDs for all locally known "tips" of the tangle
+
+The diagram below shows an example of the epoch tangle for a group with two
+epochs.
 
 ```mermaid
 flowchart RL
@@ -574,46 +566,28 @@ classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
+
 ### 4.10.3. Group tangle
 
-The purpose of the group tangle is to clearly identify all messages which are
-part of a particular group, and provide partial causal ordering.
+The purpose of the group tangle is to group and partially order all messages
+in a given group, across all epochs.  A peer can [topologically sort](https://en.wikipedia.org/wiki/Topological_sorting)
+these messages to create an audit log of actions performed in the group, such as
+discovering group discussions that give context to the exclusion of a given
+member (and thus the creation of a new epoch).  Its human-friendly name in the
+tangle data is the string `group`.
 
-For some group id `G`, where `A` is the id of the initial `group/init` message
-(in epoch 0), then define the group tangle for `G` as:
-1. **candidate messages**:
-   - the root message with id `A` so long as it has
-     ```javascript
-     content.type = 'group/init'
-     content.tangles.group = { root: null, previous: null }
-     ```
-   - any messages where
-     ```javascript
-     content.tangles.group = { root: A, previous: [...] }
-     ```
-2. **recipe**:
-    - a) the graph starts with the root message
-    - b) for the current tip(s) of the tangle
-        - find candidate messages which list that tip in the `previous` field   
-          of their tangle data
-        - check that the graph contains each message in `previous`
-            - if it does, add it to the graph
-            - otherwise set it aside till the graph does contain them
-        - newly added messages to the tangle graph constitue new tips
-    - c) repeat (b) till you cannot grow the tangle further
+We construct the group tangle for some group `G` based on its root message `R`
+as:
 
-<!--
-```mermaid
-flowchart RL
-
-M -.-> X & Y -.-> B -.-> A
-
-linkStyle 0,1,2,3,4 stroke:#FFD166,stroke-width:4;
-
-classDef default stroke:none,fill:#ccf,color:#333;
-classDef cluster fill:#fff,stroke:#000,color:#333;
-````
--->
+1. **Candidate messages**:
+    - The root message `R`
+    - Any message where the first key in `content.recps` is the ID of `G`
+2. **Recipe**:
+    - If the candidate message is `R`, then the tangle data MUST be
+    `{"root": null, "previous": null}`.
+    - Otherwise, the candidate message's tangle data MUST have `root` equal to
+    the ID of the root message `R`, and `previous` SHOULD be an array of message
+    IDs for all locally known "tips" of the tangle
 
 
 ### 4.10.4. Example: using all the tangles together
@@ -653,15 +627,15 @@ linkStyle 0 stroke:#EF476F,stroke-width:2;
 
 %% members tangle - epoch 0
 0_remove_2 --> 0_add_1 --> 0_add_0 --> 0_init
-linkStyle 1,2,3 stroke:#118AB2,stroke-width:3;
+linkStyle 1,2,3 stroke:#118AB2,stroke-width:2;
 
 %% members tangle - epoch 1
 1_add_0 --> 1_init
-linkStyle 4 stroke:#06D6A0,stroke-width:3;
+linkStyle 4 stroke:#06D6A0,stroke-width:2;
 
 %% group tangle
 1_add_0 -.- 1_init -.- 0_remove_2 -.- 0_add_1 -.- 0_add_0 -.- 0_init
-linkStyle 5,6,7,8,9 stroke:#FFD166,stroke-width:4;
+linkStyle 5,6,7,8,9 stroke:#FFD166,stroke-width:3;
 
 classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
@@ -677,10 +651,10 @@ subgraph key
   epoch[epoch tangle]         -->C[ ]
   group[group tangle]        -.->D[ ]
 end
-linkStyle 0 stroke:#118AB2,stroke-width:3;
-linkStyle 1 stroke:#06D6A0,stroke-width:3;
+linkStyle 0 stroke:#118AB2,stroke-width:2;
+linkStyle 1 stroke:#06D6A0,stroke-width:2;
 linkStyle 2 stroke:#EF476F,stroke-width:2;
-linkStyle 3 stroke:#FFD166,stroke-width:4;
+linkStyle 3 stroke:#FFD166,stroke-width:3;
 
 classDef default fill:#fff,stroke:none,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
@@ -691,6 +665,7 @@ remember there may be forks and merges because of concurrent publishing._
 
 
 Crucially, the `group/init` messages are involved in 3 tangles, e.g.
+
 ```javascript
 {
   type: `group/init`,
@@ -704,6 +679,7 @@ Crucially, the `group/init` messages are involved in 3 tangles, e.g.
 ```
 
 This message says
+
 1. I am part of a group which started with message `A`, and the last messages I    saw in the group were `W, X`
 2. The root epoch was `A` and the epoch(s) before this one was `B`
 3. I am the root of a new members tangle for this epoch
@@ -760,6 +736,7 @@ not found a tie-breaking rule with all three properties, so this is future work.
 - [ssb-meta-feeds]
 - [perfect-forward-secrecy]
 - [post-compromise-security]
+- [reducing]
 
 
 <!-- References -->
@@ -785,3 +762,5 @@ not found a tie-breaking rule with all three properties, so this is future work.
 [intersection]: https://en.wikipedia.org/wiki/Intersection_(set_theory)
 [set difference]: https://en.wikipedia.org/wiki/Complement_(set_theory)#Relative_complement
 [symmetric difference]: https://en.wikipedia.org/wiki/Symmetric_difference
+[reducing]: https://en.wikipedia.org/wiki/Reduction_operator
+[topological-sorting]: https://en.wikipedia.org/wiki/Topological_sorting]
