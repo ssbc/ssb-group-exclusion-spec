@@ -484,19 +484,35 @@ data is the string `members`.
 
 We construct the members tangle for some epoch `E` of a group `G` as:
 
-1. **Candidate messages**:
-    - The message with `content.type` equal to `group/init` which started epoch
-    `E`
-    - Any message published on the epoch feed for `E` where `content.type` is
-    equal to `group/add-member`
-    - Any message published on the epoch feed for `E` where `content.type` is
-    equal to `group/exclude`
-2. **Recipe**:
-    - If the candidate message has `content.type` equal to `group/init`, then
-    the tangle data MUST be `{"root": null, "previous": null}`.
-    - Otherwise, the candidate message's tangle data MUST have `root` equal to
-    the ID of the root message `R`, and `previous` SHOULD be an array of message
-    IDs for all locally known "tips" of the tangle
+1. Root:
+    - If you publish the `group/init` message for `E` (see 4.1.3.) or the
+    `group/init` message for epoch zero, then it MUST have the tangle data
+    `members: { root: null, previous: null }`. This is the root of the tangle.
+    - If someone else published the `group/init` message for `E`, that message
+    is considered the root of the tangle only if it has the tangle data
+    `members: { root: null, previous: null }`. If it does not, the tangle is
+    invalid and you SHOULD disregard the rules in this section.
+2. Non-roots:
+    - If you publish a `group/add-member` or `group/exclude` message for `E`,
+    then it MUST have the tangle data `members: { root: ROOTID, previous: PREVIOUS }`,
+    where `ROOTID` is the ID of the root message, and `PREVIOUS` is an array
+    containing the IDs of the "tips" of the tangle, see below.
+3. Determining tips of the tangle at the moment a non-root message is published:
+    - a) Initialize the "tip set" with one item: the root message
+    - b) Initialize the "tangle nodes" with one item: the root message
+    - c) For each tip in the current "tip set":
+        - Find messages which: (1) are valid `group/add-member` or valid
+        `group/exclude` published on an epoch feed for `E`, (2) have `ROOTID`
+        in the `root` field of their tangle data, (3) contain this tip in the
+        `previous` field of their tangle data, (4) all messages in the
+        `previous` field are in the "tangle nodes"
+        - If there are any such messages, then:
+          - Remove the tip from the "tip set"
+          - Add each such message to the "tip set"
+          - Add each such message to the "tangle nodes"
+    - d) Repeat (c) till you cannot update the tip set further
+    - e) The remaining messages in the "tip set" are the tips of the tangle
+
 
 The diagram below shows an example of the members tangle for a group with only
 epoch zero.
@@ -532,16 +548,34 @@ data is the string `epoch`.
 We construct the epoch tangle for some group `G` based on its root message `R`
 as:
 
-1. **Candidate messages**:
-    - The root message `R`
-    - Any message where `content.type` is equal to `group/init` and the first
-    key in `content.recps` is the ID of `G`
-2. **Recipe**:
-    - If the candidate message is `R`, then the tangle data MUST be
-    `{"root": null, "previous": null}`.
-    - Otherwise, the candidate message's tangle data MUST have `root` equal to
-    the ID of the root message `R`, and `previous` SHOULD be an array of message
-    IDs for all locally known "tips" of the tangle
+1. Root:
+    - If you publish the root message `R`, then it MUST have the tangle data
+    `epoch: { root: null, previous: null }`. This is the root of the tangle.
+    - If someone else published the root message `R`, that message is considered
+    the root of the tangle only if it has the tangle data
+    `epoch: { root: null, previous: null }`. If it does not, the tangle is
+    invalid and you SHOULD disregard the rules in this section.
+2. Non-roots:
+    - If you publish a `group/init` message and the first key in `content.recps`
+    is the ID of `G`, then it MUST have the tangle data
+    `epoch: { root: ROOTID, previous: PREVIOUS }`, where `ROOTID` is the ID of
+    the root message, and `PREVIOUS` is an array containing the IDs of the
+    "tips" of the tangle, see below.
+3. Determining tips of the tangle at the moment a non-root message is published:
+    - a) Initialize the "tip set" with one item: the root message
+    - b) Initialize the "tangle nodes" with one item: the root message
+    - c) For each tip in the current "tip set":
+        - Find messages which: (1) are valid `group/init` published on an epoch
+        feed with the ID of `G` as the first key in `content.recps`, (2) have
+        `ROOTID` in the `root` field of their tangle data, (3) contain this tip
+        in the `previous` field of their tangle data, (4) all messages in the
+        `previous` field are in the "tangle nodes"
+        - If there are any such messages, then:
+          - Remove the tip from the "tip set"
+          - Add each such message to the "tip set"
+          - Add each such message to the "tangle nodes"
+    - d) Repeat (c) till you cannot update the tip set further
+    - e) The remaining messages in the "tip set" are the tips of the tangle
 
 The diagram below shows an example of the epoch tangle for a group with two
 epochs.
@@ -579,15 +613,34 @@ tangle data is the string `group`.
 We construct the group tangle for some group `G` based on its root message `R`
 as:
 
-1. **Candidate messages**:
-    - The root message `R`
-    - Any message where the first key in `content.recps` is the ID of `G`
-2. **Recipe**:
-    - If the candidate message is `R`, then the tangle data MUST be
-    `{"root": null, "previous": null}`.
-    - Otherwise, the candidate message's tangle data MUST have `root` equal to
-    the ID of the root message `R`, and `previous` SHOULD be an array of message
-    IDs for all locally known "tips" of the tangle
+1. Root:
+    - If you publish the root message `R`, then it MUST have the tangle data
+    `group: { root: null, previous: null }`. This is the root of the tangle.
+    - If someone else published the root message `R`, that message is considered
+    the root of the tangle only if it has the tangle data
+    `group: { root: null, previous: null }`. If it does not, the tangle is
+    invalid and you SHOULD disregard the rules in this section.
+2. Non-roots:
+    - If you publish any message where the first key in `content.recps` is the
+    ID of `G`, then it MUST have the tangle data
+    `group: { root: ROOTID, previous: PREVIOUS }`, where `ROOTID` is the ID of
+    the root message, and `PREVIOUS` is an array containing the IDs of the
+    "tips" of the tangle, see below.
+3. Determining tips of the tangle at the moment a non-root message is published:
+    - a) Initialize the "tip set" with one item: the root message
+    - b) Initialize the "tangle nodes" with one item: the root message
+    - c) For each tip in the current "tip set":
+        - Find messages which: (1) are valid messages published with the ID of
+        `G` as the first key in `content.recps`, (2) have `ROOTID` in the `root`
+        field of their tangle data, (3) contain this tip in the `previous` field
+        of their tangle data, (4) all messages in the `previous` field are in
+        the "tangle nodes"
+        - If there are any such messages, then:
+          - Remove the tip from the "tip set"
+          - Add each such message to the "tip set"
+          - Add each such message to the "tangle nodes"
+    - d) Repeat (c) till you cannot update the tip set further
+    - e) The remaining messages in the "tip set" are the tips of the tangle
 
 
 ### 4.10.4. Example: using all the tangles together
