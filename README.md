@@ -468,6 +468,277 @@ From this we can see `e` must be added to epoch `Z` to bring it up to "correct
 membership".
 
 
+## 4.10. Tangles
+
+A "tangle" in scuttlebutt is a way to define a directed acyclic graph (DAG) of
+messages. You can read more about them in the [Tangle SIP].
+
+
+### 4.10.1. Members tangle
+
+The purpose of the members tangle is to group and partially order all messages
+that alter the group membership during a single epoch.  A peer can calculate
+the Set of members in an epoch by [reducing] the messages in this tangle.  Each
+epoch will have its own members tangle.  The human-friendly name in the tangle
+data is the string `members`.
+
+We construct the members tangle for some epoch `E` of a group `G` as:
+
+1. Root:
+    - If you publish the `group/init` message for `E` (see 4.1.3.) or the
+    `group/init` message for epoch zero, then it MUST have the tangle data
+    `members: { root: null, previous: null }`. This is the root of the tangle.
+    - If someone else published the `group/init` message for `E`, that message
+    is considered the root of the tangle only if it has the tangle data
+    `members: { root: null, previous: null }`. If it does not, the tangle is
+    invalid and you SHOULD disregard the rules in this section.
+2. Non-roots:
+    - If you publish a `group/add-member` or `group/exclude` message for `E`,
+    then it MUST have the tangle data `members: { root: ROOTID, previous: PREVIOUS }`,
+    where `ROOTID` is the ID of the root message, and `PREVIOUS` is an array
+    containing the IDs of the "tips" of the tangle, see below.
+3. Determining tips of the tangle at the moment a non-root message is published:
+    - a) Initialize the "tip set" with one item: the root message
+    - b) Initialize the "tangle nodes" with one item: the root message
+    - c) For each tip in the current "tip set":
+        - Find messages which: (1) are valid `group/add-member` or valid
+        `group/exclude` published on an epoch feed for `E`, (2) have `ROOTID`
+        in the `root` field of their tangle data, (3) contain this tip in the
+        `previous` field of their tangle data, (4) all messages in the
+        `previous` field are in the "tangle nodes"
+        - If there are any such messages, then:
+          - Remove the tip from the "tip set"
+          - Add each such message to the "tip set"
+          - Add each such message to the "tangle nodes"
+    - d) Repeat (c) till you cannot update the tip set further
+    - e) The remaining messages in the "tip set" are the tips of the tangle
+
+
+The diagram below shows an example of the members tangle for a group with only
+epoch zero.
+
+```mermaid
+flowchart RL
+
+subgraph Additions
+  0_add_0[add: Alice]
+  0_add_1[add: Bob, Carol]
+end
+
+subgraph epoch_0[Epoch 0]
+  0_init[init]
+end
+
+%% members tangle - epoch 0
+0_add_1 --> 0_add_0 --> 0_init
+linkStyle 0,1 stroke:#118AB2,stroke-width:2;
+
+classDef default stroke:#ccc,fill:#eee,color:#333;
+classDef cluster fill:#fff,stroke:#000,color:#333;
+```
+
+
+### 4.10.2. Epoch tangle
+
+The purpose of the epoch tangle is to group and partially order all messages
+that create epochs in a group.  A peer can reduce these messages to discover the
+preferred epoch and detect forked epochs.  Its human-friendly name in the tangle
+data is the string `epoch`.
+
+We construct the epoch tangle for some group `G` based on its root message `R`
+as:
+
+1. Root:
+    - If you publish the root message `R`, then it MUST have the tangle data
+    `epoch: { root: null, previous: null }`. This is the root of the tangle.
+    - If someone else published the root message `R`, that message is considered
+    the root of the tangle only if it has the tangle data
+    `epoch: { root: null, previous: null }`. If it does not, the tangle is
+    invalid and you SHOULD disregard the rules in this section.
+2. Non-roots:
+    - If you publish a `group/init` message and the first key in `content.recps`
+    is the ID of `G`, then it MUST have the tangle data
+    `epoch: { root: ROOTID, previous: PREVIOUS }`, where `ROOTID` is the ID of
+    the root message, and `PREVIOUS` is an array containing the IDs of the
+    "tips" of the tangle, see below.
+3. Determining tips of the tangle at the moment a non-root message is published:
+    - a) Initialize the "tip set" with one item: the root message
+    - b) Initialize the "tangle nodes" with one item: the root message
+    - c) For each tip in the current "tip set":
+        - Find messages which: (1) are valid `group/init` published on an epoch
+        feed with the ID of `G` as the first key in `content.recps`, (2) have
+        `ROOTID` in the `root` field of their tangle data, (3) contain this tip
+        in the `previous` field of their tangle data, (4) all messages in the
+        `previous` field are in the "tangle nodes"
+        - If there are any such messages, then:
+          - Remove the tip from the "tip set"
+          - Add each such message to the "tip set"
+          - Add each such message to the "tangle nodes"
+    - d) Repeat (c) till you cannot update the tip set further
+    - e) The remaining messages in the "tip set" are the tips of the tangle
+
+The diagram below shows an example of the epoch tangle for a group with two
+epochs.
+
+```mermaid
+flowchart RL
+
+subgraph epoch_0[Epoch 0]
+  0_init[init]
+end
+
+subgraph epoch_1[Epoch 1]
+  1_init[init]
+end
+
+%% epoch tangle
+1_init --> 0_init
+linkStyle 0 stroke:#EF476F,stroke-width:2;
+
+
+classDef default stroke:#ccc,fill:#eee,color:#333;
+classDef cluster fill:#fff,stroke:#000,color:#333;
+```
+
+
+### 4.10.3. Group tangle
+
+The purpose of the group tangle is to group and partially order all messages
+in a given group, across all epochs.  A peer can [topologically sort](https://en.wikipedia.org/wiki/Topological_sorting)
+these messages to create an audit log of actions performed in the group, such as
+discovering group discussions that give context to the exclusion of a given
+member (and thus the creation of a new epoch).  Its human-friendly name in the
+tangle data is the string `group`.
+
+We construct the group tangle for some group `G` based on its root message `R`
+as:
+
+1. Root:
+    - If you publish the root message `R`, then it MUST have the tangle data
+    `group: { root: null, previous: null }`. This is the root of the tangle.
+    - If someone else published the root message `R`, that message is considered
+    the root of the tangle only if it has the tangle data
+    `group: { root: null, previous: null }`. If it does not, the tangle is
+    invalid and you SHOULD disregard the rules in this section.
+2. Non-roots:
+    - If you publish any message where the first key in `content.recps` is the
+    ID of `G`, then it MUST have the tangle data
+    `group: { root: ROOTID, previous: PREVIOUS }`, where `ROOTID` is the ID of
+    the root message, and `PREVIOUS` is an array containing the IDs of the
+    "tips" of the tangle, see below.
+3. Determining tips of the tangle at the moment a non-root message is published:
+    - a) Initialize the "tip set" with one item: the root message
+    - b) Initialize the "tangle nodes" with one item: the root message
+    - c) For each tip in the current "tip set":
+        - Find messages which: (1) are valid messages published with the ID of
+        `G` as the first key in `content.recps`, (2) have `ROOTID` in the `root`
+        field of their tangle data, (3) contain this tip in the `previous` field
+        of their tangle data, (4) all messages in the `previous` field are in
+        the "tangle nodes"
+        - If there are any such messages, then:
+          - Remove the tip from the "tip set"
+          - Add each such message to the "tip set"
+          - Add each such message to the "tangle nodes"
+    - d) Repeat (c) till you cannot update the tip set further
+    - e) The remaining messages in the "tip set" are the tips of the tangle
+
+
+### 4.10.4. Example: using all the tangles together
+
+In this section we provide an example that illustrates the presence of all three group-related tangles.
+Suppose peer Z creates a group and performs the following actions, in this order:
+
+1. Adds peer A to the group at epoch 0
+2. Adds peers B and C to the group at epoch 0
+3. Excludes peer C, thus creating epoch 1
+4. Re-adds peers A and B to the group, now at epoch 1
+
+Then the following diagram illustrates Z's feeds (additions feed, epoch 0 feed, epoch 1 feed) and its
+messages:
+```mermaid
+flowchart RL
+
+subgraph Additions
+  0_add_0[add: A]
+  0_add_1[add: B, C]
+end
+
+subgraph epoch_0[Epoch 0]
+  0_init[init]
+
+  1_add_0[add: A, B]
+  0_remove_2[exclude: C]
+end
+
+subgraph epoch_1[Epoch 1]
+  1_init[init]
+end
+
+%% epoch tangle
+1_init --> 0_init
+linkStyle 0 stroke:#EF476F,stroke-width:2;
+
+%% members tangle - epoch 0
+0_remove_2 --> 0_add_1 --> 0_add_0 --> 0_init
+linkStyle 1,2,3 stroke:#118AB2,stroke-width:2;
+
+%% members tangle - epoch 1
+1_add_0 --> 1_init
+linkStyle 4 stroke:#06D6A0,stroke-width:2;
+
+%% group tangle
+1_add_0 -.- 1_init -.- 0_remove_2 -.- 0_add_1 -.- 0_add_0 -.- 0_init
+linkStyle 5,6,7,8,9 stroke:#FFD166,stroke-width:3;
+
+classDef default stroke:#ccc,fill:#eee,color:#333;
+classDef cluster fill:#fff,stroke:#000,color:#333;
+```
+
+```mermaid
+flowchart LR
+
+subgraph key
+  direction RL
+  members_0[members tangle 0] -->A[ ]
+  members_1[members tangle 1] -->B[ ]
+  epoch[epoch tangle]         -->C[ ]
+  group[group tangle]        -.->D[ ]
+end
+linkStyle 0 stroke:#118AB2,stroke-width:2;
+linkStyle 1 stroke:#06D6A0,stroke-width:2;
+linkStyle 2 stroke:#EF476F,stroke-width:2;
+linkStyle 3 stroke:#FFD166,stroke-width:3;
+
+classDef default fill:#fff,stroke:none,color:#333;
+classDef cluster fill:#fff,stroke:#000,color:#333;
+```
+
+_NOTE: this diagram shows all nice linear tangles for visual simplicity,
+remember there may be forks and merges because of concurrent publishing._
+
+
+Crucially, the `group/init` messages are involved in 3 tangles, e.g.
+
+```javascript
+{
+  type: `group/init`,
+  // ...
+  tangles: {
+    group: { root: A, previous: [W, X] },
+    epoch: { root: A, previous: [B] },
+    members: { root: null, previous: null }
+  }
+}
+```
+
+This message says
+
+1. I am part of a group which started with message `A`, and the last messages I    saw in the group were `W, X`
+2. The root epoch was `A` and the epoch(s) before this one was `B`
+3. I am the root of a new members tangle for this epoch
+
+
+
 ## 5. Security and Privacy Considerations
 
 
@@ -498,6 +769,7 @@ group members to eventually converge on a single most preferred epoch.  We have
 not found a tie-breaking rule with all three properties, so this is future work.
 
 
+
 ## 6. References
 
 ### 6.1. Normative References
@@ -517,6 +789,8 @@ not found a tie-breaking rule with all three properties, so this is future work.
 - [ssb-meta-feeds]
 - [perfect-forward-secrecy]
 - [post-compromise-security]
+- [reducing]
+
 
 <!-- References -->
 
@@ -533,6 +807,7 @@ not found a tie-breaking rule with all three properties, so this is future work.
 [perfect-forward-secrecy]: https://en.wikipedia.org/wiki/Forward_secrecy
 [post-compromise-security]: https://ieeexplore.ieee.org/document/7536374
 [ssb-uri-spec]: https://github.com/ssbc/ssb-uri-spec
+[Tangle SIP]: https://github.com/ssbc/sips/blob/master/009.md
 
 [subset]: https://en.wikipedia.org/wiki/Subset
 [proper subset]: https://en.wikipedia.org/wiki/Subset
@@ -540,3 +815,5 @@ not found a tie-breaking rule with all three properties, so this is future work.
 [intersection]: https://en.wikipedia.org/wiki/Intersection_(set_theory)
 [set difference]: https://en.wikipedia.org/wiki/Complement_(set_theory)#Relative_complement
 [symmetric difference]: https://en.wikipedia.org/wiki/Symmetric_difference
+[reducing]: https://en.wikipedia.org/wiki/Reduction_operator
+[topological-sorting]: https://en.wikipedia.org/wiki/Topological_sorting]
