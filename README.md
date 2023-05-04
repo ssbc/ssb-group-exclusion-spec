@@ -182,9 +182,9 @@ using the epoch key as the `feedpurpose`, as described in [ssb-meta-feeds-group-
 Section 3.2.2.
 * 4.1.3. `a` MUST publish a `group/init` message on `Ha`, as described in the
 [private-group-spec]
-* 4.1.4. `a` SHOULD publish an encrypted `group/exclude` message on `Ga` with
-the following fields in the message `content`:
-  * 4.1.4.A. `type` equals the string `group/exclude`
+* 4.1.4. `a` SHOULD publish an encrypted `group/exclude-member` message on `Ga`
+with the following fields in the message `content`:
+  * 4.1.4.A. `type` equals the string `group/exclude-member`
   * 4.1.4.B. `excludes` is an array of group member IDs (their root metafeed
   IDs) excluded from `G`.  In this case `c` is the only excluded member, but
   Section 4.1. supports excluding multiple members at once.
@@ -493,18 +493,19 @@ We construct the members tangle for some epoch `E` of a group `G` as:
     `members: { root: null, previous: null }`. If it does not, the tangle is
     invalid and you SHOULD disregard the rules in this section.
 2. Non-roots:
-    - If you publish a `group/add-member` or `group/exclude` message for `E`,
-    then it MUST have the tangle data `members: { root: ROOTID, previous: PREVIOUS }`,
-    where `ROOTID` is the ID of the root message, and `PREVIOUS` is an array
-    containing the IDs of the "tips" of the tangle, see below.
+    - If you publish a `group/add-member` or `group/exclude-member` message for
+    `E`, then it MUST have the tangle data
+    `members: { root: ROOTID, previous: PREVIOUS }`, where `ROOTID` is the ID of
+    the root message, and `PREVIOUS` is an array containing the IDs of the
+    "tips" of the tangle, see below.
 3. Determining tips of the tangle at the moment a non-root message is published:
     - a) Initialize the "tip set" with one item: the root message
     - b) Initialize the "tangle nodes" with one item: the root message
     - c) For each tip in the current "tip set":
         - Find messages which: (1) are valid `group/add-member` or valid
-        `group/exclude` published on an epoch feed for `E`, (2) have `ROOTID`
-        in the `root` field of their tangle data, (3) contain this tip in the
-        `previous` field of their tangle data, (4) all messages in the
+        `group/exclude-member` published on an epoch feed for `E`, (2) have
+        `ROOTID` in the `root` field of their tangle data, (3) contain this tip
+        in the `previous` field of their tangle data, (4) all messages in the
         `previous` field are in the "tangle nodes"
         - If there are any such messages, then:
           - Remove the tip from the "tip set"
@@ -645,16 +646,18 @@ as:
 
 ### 4.10.4. Example: using all the tangles together
 
-In this section we provide an example that illustrates the presence of all three group-related tangles.
-Suppose peer Z creates a group and performs the following actions, in this order:
+In this section we provide an example that illustrates the presence of all three
+group-related tangles.  Suppose peer Z creates a group and performs the
+following actions, in this order:
 
 1. Adds peer A to the group at epoch 0
 2. Adds peers B and C to the group at epoch 0
 3. Excludes peer C, thus creating epoch 1
 4. Re-adds peers A and B to the group, now at epoch 1
 
-Then the following diagram illustrates Z's feeds (additions feed, epoch 0 feed, epoch 1 feed) and its
-messages:
+Then the following diagram illustrates Z's feeds (additions feed, epoch 0 feed,
+epoch 1 feed) and its messages:
+
 ```mermaid
 flowchart RL
 
