@@ -127,11 +127,15 @@ Some mathematical set relations will be useful throughout this specification.
 For two sets `A` and `B`, we use the notation:
 
 * `A = B` : `A` is equivalent to `B`
-* `A ⊂ B` : `A` is a [proper subset] of `B` ("A is a [susbet] of B, AND A is NOT equivalent to B")
-* `A ∩ B` : the [intersection] of `A` and `B` (the set of elements in both `A` AND `B`)
+* `A ⊂ B` : `A` is a [proper subset] of `B` ("A is a [susbet] of B, AND A is NOT
+equivalent to B")
+* `A ∩ B` : the [intersection] of `A` and `B` (the set of elements in both `A`
+AND `B`)
 * `A ∪ B` : the [union] of `A` and `B` (the set of elements in `A` AND/OR `B`)
-* `A \ B` : the [set difference] of `A` and `B` (the set of elements in `A` but not in `B`)
-* `A △ B` : the [symmetric difference] (the set of elements in the union, but NOT in the intersection)
+* `A \ B` : the [set difference] of `A` and `B` (the set of elements in `A` but
+NOT in `B`)
+* `A △ B` : the [symmetric difference] (the set of elements in the union, but
+NOT in the intersection)
 * `∅` : the "empty set" (the set which has no elements)
 
 
@@ -178,8 +182,8 @@ perform member exclusion, the following steps SHOULD be taken in order:
 * 4.1.1. `a` MUST create a new symmetric group key `H` (also known as the epoch
 key) which MUST have at least 32 bytes of cryptographically secure random data
 * 4.1.2. `a` MUST create a new group feed `Ha` (also known as the "epoch feed")
-using the epoch key as the `feedpurpose`, as described in [ssb-meta-feeds-group-spec]
-Section 3.2.2.
+using the epoch key as the `feedpurpose`, as described in
+[ssb-meta-feeds-group-spec] Section 3.2.2.
 * 4.1.3. `a` MUST publish a `group/init` message on `Ha`, as described in the
 [private-group-spec]
 * 4.1.4. `a` SHOULD publish an encrypted `group/exclude-member` message on `Ga`
@@ -247,9 +251,9 @@ graph TB;
 ```
 
 Here we addressed two forked epochs.  In the generalized case where two or more
-forked epochs have the same membership, then the tie-breaking rule (section 4.3.)
-is used to select the preferred epoch.  The tie-breaking rule supports multiple
-inputs.
+forked epochs have the same membership, then the tie-breaking rule (section
+4.3.) is used to select the preferred epoch.  The tie-breaking rule supports
+multiple inputs.
 
 ### 4.5. Resolving forked epochs with subset membership
 
@@ -605,8 +609,9 @@ classDef cluster fill:#fff,stroke:#000,color:#333;
 ### 4.10.3. Group tangle
 
 The purpose of the group tangle is to group and partially order all messages
-in a given group, across all epochs.  A peer can [topologically sort](https://en.wikipedia.org/wiki/Topological_sorting)
-these messages to create an audit log of actions performed in the group, such as
+in a given group, across all epochs.  A peer can
+[topologically sort](https://en.wikipedia.org/wiki/Topological_sorting) these
+messages to create an audit log of actions performed in the group, such as
 discovering group discussions that give context to the exclusion of a given
 member (and thus the creation of a new epoch).  Its human-friendly name in the
 tangle data is the string `group`.
@@ -736,7 +741,8 @@ Crucially, the `group/init` messages are involved in 3 tangles, e.g.
 
 This message says
 
-1. I am part of a group which started with message `A`, and the last messages I    saw in the group were `W, X`
+1. I am part of a group which started with message `A`, and the last messages I
+saw in the group were `W, X`
 2. The root epoch was `A` and the epoch(s) before this one was `B`
 3. I am the root of a new members tangle for this epoch
 
