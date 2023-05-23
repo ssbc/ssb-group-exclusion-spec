@@ -194,15 +194,15 @@ with the following fields in the message `content`:
   Section 4.1. supports excluding multiple members at once.
   * 4.1.4.C. `recps` is an array containing a single string: the group ID for
   `G`, signalling that this message should be box2-encrypted for the group `G`
-* 4.1.5. `a` MUST publish a `group/add-member` message on `Ga`, to add remaining
-group members (this includes `a`, for recovery purposes) to the epoch `H`, such
-that the message schema is the same as the one in [ssb-meta-feeds-group-spec]
-Section 3.1 with the following exceptions:
+* 4.1.5. `a` MUST publish a `group/add-member` message on their additions feed,
+to add remaining group members (this includes `a`, for recovery purposes) to the
+epoch `H`, such that the message schema is the same as the one in
+[ssb-meta-feeds-group-spec] Section 3.1 with the following exceptions:
   * 4.1.5.A. If a single SSB message cannot, due to message size
   restrictions, contain all remaining members as recipients, then member `a`
-  MUST publish on `Ga` a sequence of `group/add-members` messages according to
-  [ssb-meta-feeds-group-spec] Section 3.1, such that the union of all recipients
-  in that sequence equals all remaining members
+  MUST publish on their additions feed a sequence of `group/add-members`
+  messages according to [ssb-meta-feeds-group-spec] Section 3.1, such that the
+  union of all recipients in that sequence equals all remaining members
 
 
 ### 4.2. Preferring the next epoch
@@ -506,11 +506,11 @@ We construct the members tangle for some epoch `E` of a group `G` as:
     - a) Initialize the "tip set" with one item: the root message
     - b) Initialize the "tangle nodes" with one item: the root message
     - c) For each tip in the current "tip set":
-        - Find messages which: (1) are valid `group/add-member` or valid
-        `group/exclude-member` published on an epoch feed for `E`, (2) have
-        `ROOTID` in the `root` field of their tangle data, (3) contain this tip
-        in the `previous` field of their tangle data, (4) all messages in the
-        `previous` field are in the "tangle nodes"
+        - Find messages which: (1) are valid `group/add-member` on additions
+        feeds or valid `group/exclude-member` published on an epoch feed for
+        `E`, (2) have `ROOTID` in the `root` field of their tangle data, (3)
+        contain this tip in the `previous` field of their tangle data, (4) all
+        messages in the `previous` field are in the "tangle nodes"
         - If there are any such messages, then:
           - Remove the tip from the "tip set"
           - Add each such message to the "tip set"
@@ -669,12 +669,12 @@ flowchart RL
 subgraph Additions
   0_add_0[add: A]
   0_add_1[add: B, C]
+  1_add_0[add: A, B]
 end
 
 subgraph epoch_0[Epoch 0]
   0_init[init]
 
-  1_add_0[add: A, B]
   0_remove_2[exclude: C]
 end
 
