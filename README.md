@@ -360,14 +360,22 @@ graph TB;
 
 ### 4.8. Most preferred epoch
 
+In sections 4.2.–4.7. we addressed only two forked epochs at a time.  If there
+are more than two simultaneously existing forked epochs, then you can still use
+those rules to resolve the situation in a pairwise fashion.  Each pairwise
+application of the rules should reduce the number of forked epochs, and this is
+repeated until there is only one epoch left.  It shouldn't matter which pairs
+of forked epochs are chosen when applying the rules, because the conclusion
+should be the same regardless of the order in which the rules are applied.
+
 Given the rules in sections 4.2.–4.7. defining which epoch is preferred, a
-directed acyclic graph of preference arises, allowing us to determining the
-"most preferred epoch".  Each group member has their own definition of most
-preferred epoch, and they are not necessarily the same.  For instance, in the
+directed acyclic graph of preference arises, allowing us to determine the
+"most preferred epoch".  Each group member can determine their own most
+preferred epoch, but they are not necessarily the same.  For instance, in the
 case of forked epochs with disjoint memberships (4.7.), the members of the two
 disjoint epochs select different most preferred epochs.
 
-The "other epochs" are all the epochs that succeed epoch zero, except the most
+We call "other epochs" all the epochs that succeed epoch zero, minus the most
 preferred epoch.
 
 
