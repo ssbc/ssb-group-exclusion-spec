@@ -803,6 +803,7 @@ not found a tie-breaking rule with all three properties, so this is future work.
 - [scuttlebutt-protocol-guide]
 - [ssb-private-group-keys]
 - [ssb-tribes2]
+- [ssb-tribes2-demo]
 - [ssb-meta-feeds]
 - [perfect-forward-secrecy]
 - [post-compromise-security]
@@ -819,6 +820,7 @@ not found a tie-breaking rule with all three properties, so this is future work.
 [scuttlebutt-protocol-guide]: https://ssbc.github.io/scuttlebutt-protocol-guide/
 [ssb-private-group-keys]: https://github.com/ssbc/ssb-private-group-keys
 [ssb-tribes2]: https://github.com/ssbc/ssb-tribes2
+[ssb-tribes2-demo]: https://github.com/ssbc/ssb-tribes2-demo
 [ssb-meta-feeds]: https://github.com/ssbc/ssb-meta-feeds
 [private-groups-original-notes]: https://github.com/ssbc/envelope-spec/blob/master/original_notes.md
 [perfect-forward-secrecy]: https://en.wikipedia.org/wiki/Forward_secrecy
