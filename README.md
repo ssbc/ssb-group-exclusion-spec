@@ -614,50 +614,7 @@ classDef cluster fill:#fff,stroke:#000,color:#333;
 ```
 
 
-### 4.10.3. Group tangle
-
-The purpose of the group tangle is to group and partially order all messages
-in a given group, across all epochs.  A peer can
-[topologically sort](https://en.wikipedia.org/wiki/Topological_sorting) these
-messages to create an audit log of actions performed in the group, such as
-discovering group discussions that give context to the exclusion of a given
-member (and thus the creation of a new epoch).  Its human-friendly name in the
-tangle data is the string `group`.
-
-We construct the group tangle for some group `G` based on its root message `R`
-as:
-
-1. Root:
-    - If you publish the root message `R`, then it MUST have the tangle data
-    `group: { root: null, previous: null }`. This is the root of the tangle.
-    - If someone else published the root message `R`, that message is considered
-    the root of the tangle only if it has the tangle data
-    `group: { root: null, previous: null }`. If it does not, the tangle is
-    invalid and you SHOULD disregard the rules in this section.
-2. Non-roots:
-    - If you publish any message where the first key in `content.recps` is the
-    ID of `G`, then it MUST have the tangle data
-    `group: { root: ROOTID, previous: PREVIOUS }`, where `ROOTID` is the ID of
-    the root message, and `PREVIOUS` is an array containing the IDs of the
-    "tips" of the tangle, see below.
-3. Determining tips of the tangle at the moment a non-root message is published:
-    - a) Initialize the "tip set" with one item: the root message
-    - b) Initialize the "tangle nodes" with one item: the root message
-    - c) For each tip in the current "tip set":
-        - Find messages which: (1) are valid messages published with the ID of
-        `G` as the first key in `content.recps`, (2) have `ROOTID` in the `root`
-        field of their tangle data, (3) contain this tip in the `previous` field
-        of their tangle data, (4) all messages in the `previous` field are in
-        the "tangle nodes"
-        - If there are any such messages, then:
-          - Remove the tip from the "tip set"
-          - Add each such message to the "tip set"
-          - Add each such message to the "tangle nodes"
-    - d) Repeat (c) till you cannot update the tip set further
-    - e) The remaining messages in the "tip set" are the tips of the tangle
-
-
-### 4.10.4. Example: using all the tangles together
+### 4.10.3. Example: using all the tangles together
 
 In this section we provide an example that illustrates the presence of all three
 group-related tangles.  Suppose peer Z creates a group and performs the
@@ -702,9 +659,9 @@ linkStyle 1,2,3 stroke:#118AB2,stroke-width:2;
 1_add_0 --> 1_init
 linkStyle 4 stroke:#06D6A0,stroke-width:2;
 
-%% group tangle
-1_add_0 -.- 1_init -.- 0_remove_2 -.- 0_add_1 -.- 0_add_0 -.- 0_init
-linkStyle 5,6,7,8,9 stroke:#FFD166,stroke-width:3;
+%% just to force the correct layout
+1_init---0_remove_2
+linkStyle 5 stroke:#0000,stroke-width:0;
 
 classDef default stroke:#ccc,fill:#eee,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
@@ -718,12 +675,10 @@ subgraph key
   members_0[members tangle 0] -->A[ ]
   members_1[members tangle 1] -->B[ ]
   epoch[epoch tangle]         -->C[ ]
-  group[group tangle]        -.->D[ ]
 end
 linkStyle 0 stroke:#118AB2,stroke-width:2;
 linkStyle 1 stroke:#06D6A0,stroke-width:2;
 linkStyle 2 stroke:#EF476F,stroke-width:2;
-linkStyle 3 stroke:#FFD166,stroke-width:3;
 
 classDef default fill:#fff,stroke:none,color:#333;
 classDef cluster fill:#fff,stroke:#000,color:#333;
@@ -731,7 +686,6 @@ classDef cluster fill:#fff,stroke:#000,color:#333;
 
 _NOTE: this diagram shows all nice linear tangles for visual simplicity,
 remember there may be forks and merges because of concurrent publishing._
-
 
 Crucially, the `group/init` messages are involved in 3 tangles, e.g.
 
@@ -753,7 +707,6 @@ This message says
 saw in the group were `W, X`
 2. The root epoch was `A` and the epoch(s) before this one was `B`
 3. I am the root of a new members tangle for this epoch
-
 
 
 ## 5. Security and Privacy Considerations
