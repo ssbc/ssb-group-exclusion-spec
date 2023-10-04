@@ -176,8 +176,9 @@ graph TB;
   zero--"a excludes c"-->one[H: a,b,d]
 ```
 
-Let `Ga` be `a`'s subfeed dedicated for publishing messages for epoch `G`.  To
-perform member exclusion, the following steps SHOULD be taken in order:
+Let `Ga` be `a`'s subfeed dedicated for publishing messages for epoch `G`, and
+similarly `Gc` be `c`'s subfeed.  To perform member exclusion, the following
+steps SHOULD be taken in order:
 
 * 4.1.1. `a` MUST create a new symmetric group key `H` (also known as the epoch
 key) which MUST have at least 32 bytes of cryptographically secure random data
@@ -189,9 +190,12 @@ using the epoch key as the `feedpurpose`, as described in
 * 4.1.4. `a` SHOULD publish an encrypted `group/exclude-member` message on `Ga`
 with the following fields in the message `content`:
   * 4.1.4.A. `type` equals the string `group/exclude-member`
-  * 4.1.4.B. `excludes` is an array of group member IDs (their root metafeed
-  IDs) excluded from `G`.  In this case `c` is the only excluded member, but
-  Section 4.1. supports excluding multiple members at once.
+  * 4.1.4.B. `excludes` is an array of objects with the shape
+  `{id, groupFeedId, sequence}` where `id` is the root metafeed ID of `c`,
+  `groupFeedId` is `Gc`'s ID, and `sequence` is the sequence number of the last
+  message `a` possesses from `Gc`.  In this case `c` is the only excluded
+  member, so we only have one `{id, groupFeedId, sequence}` object but Section
+  4.1. also supports excluding multiple members at once.
   * 4.1.4.C. `recps` is an array containing a single string: the group ID for
   `G`, signalling that this message should be box2-encrypted for the group `G`
 * 4.1.5. `a` MUST publish a `group/add-member` message on their additions feed,
@@ -394,12 +398,20 @@ that feed to an interested peer.
 
 As soon as a peer `a` has discovered their most preferred epoch `H`:
 
-* 4.8.2.A. `a` SHOULD cease fetching messages from group feeds of other epochs
-`X` belonging to a member that was excluded from `X`, but should continue to
-fetch messages from group feeds belonging to any remaining member of `X`. See
+* 4.8.2.A. (Fetch next epoch) `a` SHOULD fetch messages from group feeds of `H`
+for all members in `H`. See figure 7 as an example.
+* 4.8.2.B. (Cancel fetching excluded members) `a` SHOULD cease fetching messages
+from group feeds of other epochs `X` belonging to any member excluded from `X`,
+but should continue to fetch messages from group feeds of remaining members of
+`X`. See figure 7.
+* 4.8.2.C. (Out-of-order fetching for tangle integrity) As an exception to
+4.8.2.B., whenever `a` is validating a tangle (see section 4.10) and detects a
+missing message `Q`, they SHOULD fetch `Q` in out-of-order fashion (OOO, that
+is, specifically requesting that message from remote peers, disregarding
+the feed in which it was published), even if `Q` is from an excluded member. See
 figure 8 as an example.
-* 4.8.2.B. `a` SHOULD continue to serve messages from group feeds of any epoch
-`X` belonging to **any** member of `X`.
+* 4.8.2.D. (Serving all feeds) `a` SHOULD continue to serve messages from group
+feeds of any epoch `X` belonging to **any** member of `X`.
 
 ```mermaid
 ---
@@ -408,21 +420,45 @@ title: Figure 7
 graph LR;
   afetch[a fetches]
   subgraph X
-    Xb[b's group feed in X]
     Xa[a's group feed in X]
+    Xb[b's group feed in X]
     Xc[c's group feed in X]
   end
   X--"b excludes c"-->H
   subgraph H
-    Hb[b's group feed in H]
     Ha[a's group feed in H]
+    Hb[b's group feed in H]
   end
   afetch -.-> Xa & Xb & Ha & Hb
 
   style afetch fill:#0000,stroke:#0000;
 ```
 
-## 4.9 Adding new members
+```mermaid
+---
+title: Figure 8
+---
+flowchart RL
+
+A[Msg A]
+B[Msg B]
+C[Msg C]
+subgraph Fetch[Fetch OOO]
+  Q[Msg Q]
+end
+D[Msg D]
+E[Msg E]
+D-->Q-->B
+D-->C-->B-->A
+E-->C
+
+classDef default stroke:#ccc,fill:#eee,color:#333;
+classDef cluster fill:#fff0,stroke:#000,color:#000,stroke-dasharray: 5 5;
+classDef dead stroke:#ccc,fill:#888,color:#000;
+class Q dead;
+```
+
+## 4.9. Adding new members
 
 When adding a new member to the group, you MUST add them to all the epochs in
 the history of the group, starting with epoch 0, and ending with the latest
@@ -432,12 +468,12 @@ We add them to all epochs (even non-preferred epochs) because content may have
 been published in these forks, and we want everyone to be reading the same
 context.
 
-In figure 8, `b` adds `e` to the group, meaning they add them to all the epochs
+In figure 9, `b` adds `e` to the group, meaning they add them to all the epochs
 they can see.
 
 ```mermaid
 ---
-title: Figure 8
+title: Figure 9
 ---
 graph TB;
   A0[X: a,b,c,d]
@@ -453,7 +489,7 @@ Later, if `b` discovers another epoch `Z` (which hasn't had `e` added):
 
 ```mermaid
 ---
-title: Figure 9
+title: Figure 10
 ---
 graph TB;
   A[X: a,b,c,d,<b>e</b>]
@@ -468,7 +504,7 @@ The "correct membership" for a particular epoch is calculated as the union of
 all declared members in all epochs, minus the union of all excluded members in
 any epoch *up till that epoch*.
 
-In epoch `Z` in figure 9 (above), the correct membership is:
+In epoch `Z` in figure 10 (above), the correct membership is:
 
 ```
   (all member additions) \ (all member exclusions leading up to Z)
@@ -531,6 +567,9 @@ The diagram below shows an example of the members tangle for a group with only
 epoch zero.
 
 ```mermaid
+---
+title: Figure 11
+---
 flowchart RL
 
 subgraph Additions
@@ -594,6 +633,9 @@ The diagram below shows an example of the epoch tangle for a group with two
 epochs.
 
 ```mermaid
+---
+title: Figure 12
+---
 flowchart RL
 
 subgraph epoch_0[Epoch 0]
@@ -672,6 +714,9 @@ Then the following diagram illustrates Z's feeds (additions feed, epoch 0 feed,
 epoch 1 feed) and its messages:
 
 ```mermaid
+---
+title: Figure 13
+---
 flowchart RL
 
 subgraph Additions
@@ -768,7 +813,37 @@ timestamps of messages published to the group and deriving suitable timezones
 for each peer.
 
 
-### 5.2. Weak tie-breaking rule
+### 5.2. Excluded member has a time window to publish more messages
+
+Due to eventual consistency in a distributed system, the exclusion of a member
+is not immediate across the whole group, and depending on the network topology
+and uptimes of peers, it is possible that an excluded member can publish more
+messages that will be replicated to some members, prior to them moving on to the
+next epoch.
+
+Suppose member `a` excludes member `b` at epoch `G`, and `b` sees this exclusion
+message but chooses to publish a message (or many) still in epoch `G`.  A third
+member `c` may come online and replicate with `b` before it has a chance to
+replicate with `a`, thus getting messages that `b` published after they had
+known they were excluded.
+
+The more frequently-connecting the network topology is, the smaller this time
+window will be, and the less severe this issue will be.
+
+
+### 5.3. Collusion
+
+Members who sympathize and coordinate with recently excluded member(s) can
+effectively nullify the exclusion in various ways.  One way is by re-adding the
+excluded member, which would be detected by remaining members too.  It is also
+possible to stealthily re-add excluded members, by sharing the "group key"
+without publishing an accompanying `group/add-member` message.
+
+This specification does not address collusion, but it is recommended to exclude
+multiple members at once if it is possible that they may collude.
+
+
+### 5.4. Weak tie-breaking rule
 
 The tie-breaking rule is simple and easy to implement, but it can be gamed such
 that a malicious group member can force their forked epoch to be preferred over
@@ -784,7 +859,6 @@ a tie-break.  However, we also require tie-breaking rules to be deterministic,
 and to create a total order between a set of forked epochs, because we need
 group members to eventually converge on a single most preferred epoch.  We have
 not found a tie-breaking rule with all three properties, so this is future work.
-
 
 
 ## 6. References
@@ -805,6 +879,7 @@ not found a tie-breaking rule with all three properties, so this is future work.
 - [ssb-tribes2]
 - [ssb-tribes2-demo]
 - [ssb-meta-feeds]
+- [ssb-ooo]
 - [perfect-forward-secrecy]
 - [post-compromise-security]
 - [reducing]
@@ -827,6 +902,7 @@ not found a tie-breaking rule with all three properties, so this is future work.
 [post-compromise-security]: https://ieeexplore.ieee.org/document/7536374
 [ssb-uri-spec]: https://github.com/ssbc/ssb-uri-spec
 [Tangle SIP]: https://github.com/ssbc/sips/blob/master/009.md
+[ssb-ooo]: https://github.com/ssbc/ssb-ooo/
 
 [subset]: https://en.wikipedia.org/wiki/Subset
 [proper subset]: https://en.wikipedia.org/wiki/Subset
