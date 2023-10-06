@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # ssb-group-exclusion-spec
 
-Version: 0.0
+Version: 1.0
 
 Authors: Mix Irving <mix@protozoa.nz>, Andre Staltz <contact@staltz.com>
 
