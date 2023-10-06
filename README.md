@@ -406,7 +406,7 @@ but should continue to fetch messages from group feeds of remaining members of
 `X`. See figure 7.
 * 4.8.2.C. (Out-of-order fetching for tangle integrity) As an exception to
 4.8.2.B., whenever `a` is validating a tangle (see section 4.10) and detects a
-missing message `Q`, they SHOULD fetch `Q` in out-of-order fashion (OOO, that
+missing message `Q`, they MAY fetch `Q` in out-of-order fashion (OOO, that
 is, specifically requesting that message from remote peers, disregarding
 the feed in which it was published), even if `Q` is from an excluded member. See
 figure 8 as an example.
