@@ -884,6 +884,12 @@ not found a tie-breaking rule with all three properties, so this is future work.
 - [post-compromise-security]
 - [reducing]
 
+## Acknowledgements
+
+<img src="./nlnet-logo.svg" width="100"> <img src="./ngi-assure-logo.png" width="100">
+
+This project has received funding from the European Union’s Horizon 2020 research and innovation programme within the framework of the NGI-Assure Project funded under grant agreement No 957073.
+
 
 <!-- References -->
 
